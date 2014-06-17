@@ -1519,14 +1519,19 @@ class GemmOptimizer(Optimizer):
                     # This mean that we already removed this node from
                     # the graph
                     continue
-                if not [isinstance(inp, (T.Dot, Dot22)) or
-                        (inp.owner and isinstance(inp.owner.op, T.Elemwise))
-                        for inp in node.inputs]:
+#                if not any([isinstance(inp, (T.Dot, Dot22)) or
+#                            (inp.owner and isinstance(inp.owner.op, T.Elemwise) and
+#                             any([inp2.owner and isinstance(inp2.owner.op,
+#                                                            (T.Dot, Dot22))
+#                                  for inp2 in inp.owner.inputs]))
+#                            for inp in node.inputs]):
                     # We don't want to check all the elemwise cases,
                     # just the one close enough to the Dot. The
                     # elemwise check will "canonize" the graph and
                     # check all elemwises needed.
-                    continue
+#                    continue
+#                theano.printing.debugprint(node, depth=3)
+#                import pdb;pdb.set_trace()
                 try:
                     nb_node_checked += 1
                     new_outputs, time1, time2, time3 = _gemm_from_node2(node)
@@ -1565,6 +1570,8 @@ class GemmOptimizer(Optimizer):
             callbacks_time = {}
             for k, v in fgraph.execute_callbacks_times.iteritems():
                 if k in callbacks_before:
+                    if v > 0:
+                        import pdb;pdb.set_trace()
                     callbacks_time[k] = v - callbacks_before[k]
                 else:
                     callbacks_time[k] = v
