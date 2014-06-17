@@ -1480,6 +1480,7 @@ class GemmOptimizer(Optimizer):
     def apply(self, fgraph):
         did_something = True
         nb_iter = 0
+        nb_node_checked = 0
         nb_replacement = 0
         nb_replacement_didn_t_remove = 0
         nb_inconsistency_make = 0
@@ -1488,6 +1489,7 @@ class GemmOptimizer(Optimizer):
         time_factor_can = 0
         time_factor_list = 0
         time_toposort = 0
+        time_iter = []
         if fgraph.profile:
             validate_before = fgraph.profile.validate_time
             callbacks_before = fgraph.execute_callbacks_times.copy()
@@ -1526,6 +1528,7 @@ class GemmOptimizer(Optimizer):
                     # check all elemwises needed.
                     continue
                 try:
+                    nb_node_checked += 1
                     new_outputs, time1, time2, time3 = _gemm_from_node2(node)
                     time_canonicalize += time1
                     time_factor_can += time2
@@ -1554,6 +1557,7 @@ class GemmOptimizer(Optimizer):
                     except ReplacementDidntRemovedError, e:
                         nb_replacement_didn_t_remove += 1
                         self.warned = True
+            time_iter.append(time.time() - t0)
         fgraph.remove_feature(u)
         if fgraph.profile:
             validate_time = fgraph.profile.validate_time - validate_before
@@ -1569,10 +1573,11 @@ class GemmOptimizer(Optimizer):
             callback_time = None
             callbacks_time = {}
 
-        return (self, nb_iter, nb_replacement, nb_replacement_didn_t_remove,
+        return (self, nb_iter, nb_node_checked,
+                nb_replacement, nb_replacement_didn_t_remove,
                 nb_inconsistency_make, nb_inconsistency_replace,
                 time_canonicalize, time_factor_can,
-                time_factor_list, time_toposort,
+                time_factor_list, time_toposort, time_iter,
                 validate_time, callback_time, callbacks_time,)
 
     @staticmethod
@@ -1580,18 +1585,20 @@ class GemmOptimizer(Optimizer):
         blanc = ('    ' * level)
         print >> stream, blanc, "GemmOptimizer"
         print >> stream, blanc, " nb_iter", prof[1]
-        print >> stream, blanc, " nb_replacement", prof[2]
-        print >> stream, blanc, " nb_replacement_didn_t_remove", prof[3]
-        print >> stream, blanc, " nb_inconsistency_make", prof[4]
-        print >> stream, blanc, " nb_inconsistency_replace", prof[5]
-        print >> stream, blanc, " time_canonicalize", prof[6]
-        print >> stream, blanc, " time_factor_can", prof[7]
-        print >> stream, blanc, " time_factor_list", prof[8]
-        print >> stream, blanc, " time_toposort", prof[9]
-        print >> stream, blanc, " validate_time", prof[10]
-        print >> stream, blanc, " callback_time", prof[11]
+        print >> stream, blanc, " nb_node_checked", prof[2]
+        print >> stream, blanc, " nb_replacement", prof[3]
+        print >> stream, blanc, " nb_replacement_didn_t_remove", prof[4]
+        print >> stream, blanc, " nb_inconsistency_make", prof[5]
+        print >> stream, blanc, " nb_inconsistency_replace", prof[6]
+        print >> stream, blanc, " time_canonicalize", prof[7]
+        print >> stream, blanc, " time_factor_can", prof[8]
+        print >> stream, blanc, " time_factor_list", prof[9]
+        print >> stream, blanc, " time_toposort", prof[10]
+        print >> stream, blanc, " time_iter", prof[11]
+        print >> stream, blanc, " validate_time", prof[12]
+        print >> stream, blanc, " callback_time", prof[13]
         print >> stream, blanc, " callbacks_time"
-        for i in sorted(prof[12].iteritems(), key=lambda a: a[1]):
+        for i in sorted(prof[14].iteritems(), key=lambda a: a[1]):
             if i[1] > 0:
                 print i
 
