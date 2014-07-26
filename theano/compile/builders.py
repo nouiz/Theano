@@ -124,20 +124,23 @@ class OpFromGraph(gof.Op):
                                     **self.kwargs)
         try:
             # Try to generate a big c thunk.
-            fgraph = gof.FunctionGraph(inputs=self.new_inputs,
-                                       outputs=self.new_outputs)
+
+            # We reuse the fgraph from self.fn, as we know it is a good fgraph.
+            # It get optimzied and have DeepCopy introduced when needed.
+            fgraph = self.fn.maker.fgraph
+
             link = gof.CLinker()  # scheduler=config.scheduler)
-            # TODO linker.no_recycling, put inputs and outputs?
-            link.accept(fgraph, no_recycling=node.inputs + node.outputs)
+            # TODO linker.no_recycling, put inputs and outputs? Put Nothing?
+            link.accept(fgraph, no_recycling=fgraph.inputs + fgraph.outputs)
             # TODO, error_storage??
             node_input_storage = [storage_map[r] for r in node.inputs]
             node_output_storage = [storage_map[r] for r in node.outputs]
             outputs = link.make_thunk(input_storage=node_input_storage,
                                       output_storage=node_output_storage)
             fill_storage, node_input_filters, node_output_filters = outputs
-            import pdb;pdb.set_trace()
+
             # Need to use the output storage provided at run time, not
-            # at graph build time. When this happen?
+            # at graph build time. This is just an extra check.
             for var, container in zip(node.inputs + node.outputs,
                                       node_input_filters + node_output_filters):
                 assert storage_map[var] is container.storage
