@@ -1,5 +1,5 @@
 import theano
-from theano import gof
+from theano import config, gof
 from theano.compile.function_module import orig_function
 from theano.compile import SharedVariable, rebuild_collect_shared
 from theano.gof import ops_with_inner_function
@@ -99,7 +99,6 @@ class OpFromGraph(gof.Op):
         self.input_types = [input.type for input in inputs]
         self.output_types = [output.type for output in outputs]
 
-
     def __eq__(self, other):
         #TODO: recognize a copy
         return self is other
@@ -118,13 +117,45 @@ class OpFromGraph(gof.Op):
                          [type() for type in self.output_types])
 
     def make_thunk(self, node, storage_map, compute_map, no_recycling):
-        ret = super(OpFromGraph, self).make_thunk(node, storage_map,
-                                                  compute_map, no_recycling)
         if not hasattr(self, "fn"):
+            # Needed to be always done, for DebugMode
             self.fn = orig_function(self.new_inputs,
                                     self.new_outputs,
                                     **self.kwargs)
-        return ret
+        try:
+            # Try to generate a big c thunk.
+            fgraph = gof.FunctionGraph(inputs=self.new_inputs,
+                                       outputs=self.new_outputs)
+            link = gof.CLinker()  # scheduler=config.scheduler)
+            # TODO linker.no_recycling, put inputs and outputs?
+            link.accept(fgraph, no_recycling=node.inputs + node.outputs)
+            # TODO, error_storage??
+            node_input_storage = [storage_map[r] for r in node.inputs]
+            node_output_storage = [storage_map[r] for r in node.outputs]
+            outputs = link.make_thunk(input_storage=node_input_storage,
+                                      output_storage=node_output_storage)
+            fill_storage, node_input_filters, node_output_filters = outputs
+            import pdb;pdb.set_trace()
+            # Need to use the output storage provided at run time, not
+            # at graph build time. When this happen?
+            for var, container in zip(node.inputs + node.outputs,
+                                      node_input_filters + node_output_filters):
+                assert storage_map[var] is container.storage
+
+            def rval():
+                fill_storage()
+                for o in node.outputs:
+                    compute_map[o][0] = True
+            rval.cthunk = fill_storage.cthunk
+            rval.inputs = node_input_storage
+            rval.outputs = node_output_storage
+            rval.lazy = False
+            return rval
+        except NotImplementedError:
+            ret = super(OpFromGraph, self).make_thunk(
+                node, storage_map,
+                compute_map, no_recycling)
+            return ret
 
     def perform(self, node, inputs, outputs):
         variables = self.fn(*inputs)
