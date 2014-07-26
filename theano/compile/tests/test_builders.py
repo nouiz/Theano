@@ -9,6 +9,7 @@ from theano import tensor
 from theano import tensor as T
 
 from theano.compile.builders import OpFromGraph
+from theano.tests import unittest_tools as utt
 
 
 class T_OpFromGraph(unittest.TestCase):
@@ -58,6 +59,8 @@ class T_OpFromGraph(unittest.TestCase):
         zv = numpy.ones((2, 2), dtype=config.floatX)*5
         assert numpy.all(11.0 == fn(xv, yv, zv))
 
+        utt.verify_grad(op, (xv, yv, zv))
+
     def test_grad_grad(self):
         x, y, z = T.matrices('xyz')
         e = x + y * z
@@ -70,6 +73,15 @@ class T_OpFromGraph(unittest.TestCase):
         yv = numpy.ones((2, 2), dtype=config.floatX)*3
         zv = numpy.ones((2, 2), dtype=config.floatX)*5
         assert numpy.allclose(6.0, fn(xv, yv, zv))
+
+        utt.verify_grad(op, (xv, yv, zv))
+
+        def grad2(x, y, z):
+            # In conjunction with verify grad, this test the second
+            # derivative.
+            f = op(x, y, z)
+            return T.grad(T.sum(f), y)
+        utt.verify_grad(grad2, (xv, yv, zv))
 
     def test_shared(self):
         x, y, z = T.matrices('xyz')
@@ -92,7 +104,7 @@ class T_OpFromGraph(unittest.TestCase):
         x, y, z = T.matrices('xyz')
         s = shared(numpy.random.rand(2, 2).astype(config.floatX))
         e = x + y * z + s
-        op = OpFromGraph([x, y, z], [e], mode='FAST_RUN')
+        op = OpFromGraph([x, y, z], [e])
         f = op(x, y, z)
         f = f - T.grad(T.sum(f), y)
         fn = function([x, y, z], f)
@@ -100,6 +112,7 @@ class T_OpFromGraph(unittest.TestCase):
         yv = numpy.ones((2, 2), dtype=config.floatX) * 3
         zv = numpy.ones((2, 2), dtype=config.floatX) * 5
         assert numpy.allclose(11.0 + s.get_value(), fn(xv, yv, zv))
+        utt.verify_grad(op, (xv, yv, zv))
 
         # grad again the shared variable
         f = op(x, y, z)
@@ -108,6 +121,7 @@ class T_OpFromGraph(unittest.TestCase):
         assert numpy.allclose(15.0 + s.get_value(),
                               fn(xv, yv, zv))
 
+        utt.verify_grad(op, (xv, yv, zv))
 
 if __name__ == '__main__':
     unittest.main()
