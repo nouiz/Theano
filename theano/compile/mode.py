@@ -6,10 +6,11 @@ from textwrap import dedent
 
 import numpy
 
-import  theano
+import theano
 from theano import gof
 import theano.gof.vm
 from theano.configparser import config, AddConfigVar, StrParam
+from theano.gof.opt import merge_optimizer
 from theano.compile.ops import register_view_op_c_code, _output_guard
 
 
@@ -369,9 +370,6 @@ def get_mode(orig_string):
 def get_default_mode():
     return get_mode(None)
 
-# Removed: use config.mode instead.
-#default_mode = config.mode
-
 
 def register_mode(name, mode):
     """Add a `Mode` which can be referred to by `name` in `function`."""
@@ -380,10 +378,45 @@ def register_mode(name, mode):
     predefined_modes[name] = mode
 
 
+def register_canonicalize(lopt, *tags, **kwargs):
+    name = (kwargs and kwargs.pop('name')) or lopt.__name__
+    optdb['canonicalize'].register(name, lopt, 'fast_run', *tags)
+    return lopt
+
+
+def register_stabilize(lopt, *tags, **kwargs):
+    name = (kwargs and kwargs.pop('name')) or lopt.__name__
+    optdb['stabilize'].register(name, lopt, 'fast_run', *tags)
+    return lopt
+
+
+def register_specialize(lopt, *tags, **kwargs):
+    name = (kwargs and kwargs.pop('name')) or lopt.__name__
+    optdb['specialize'].register(name, lopt, 'fast_run', *tags)
+    return lopt
+
+
+def register_uncanonicalize(lopt, *tags, **kwargs):
+    name = (kwargs and kwargs.pop('name')) or lopt.__name__
+    optdb['uncanonicalize'].register(name, lopt, 'fast_run', *tags)
+    return lopt
+
+
+def register_specialize_device(lopt, *tags, **kwargs):
+    name = (kwargs and kwargs.pop('name')) or lopt.__name__
+    optdb['specialize_device'].register(name, lopt, 'fast_run', *tags)
+    return lopt
+
+
+# Register merge_optimizer as a global opt during canonicalize
+optdb['canonicalize'].register(
+    'canon_merge', merge_optimizer, 'fast_run')
+
+
 def register_OutputGuard_c_code(type):
     """Deprecated function calling register_view_op_c_code"""
     warnings.warn("register_OutputGuard_c_code(type) is deprecated, "
-            "theano.compile.register_view_op_c_code(type, code, version=()) instead.",
+            "use theano.compile.register_view_op_c_code(type, code, version=()) instead.",
             stacklevel=2)
     register_view_op_c_code(
             type,

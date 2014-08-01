@@ -32,11 +32,13 @@ from theano import scalar
 from theano.tensor import basic as T
 from theano import compile  # to register the optimizer built by this file
 from theano.compile.ops import Shape_i
+from theano.compile import (
+    register_canonicalize, register_stabilize, register_specialize,
+    register_uncanonicalize, register_specialize_device)
 
 from theano.gof.python25 import any, all
 from theano.gof.opt import (Optimizer, pre_constant_merge,
                             pre_greedy_local_optimizer)
-from theano.gof.opt import merge_optimizer
 from theano.gof import toolbox
 from theano.tensor.basic import get_scalar_constant_value, ShapeError, NotScalarConstantError
 from theano.compat.six import StringIO
@@ -307,41 +309,6 @@ compile.optdb.register('inplace_elemwise_opt', inplace_elemwise_optimizer, 75,
                        'inplace_opt',  # for historic reason
                        'inplace_elemwise_optimizer',
                        'fast_run', 'inplace')
-
-
-def register_canonicalize(lopt, *tags, **kwargs):
-    name = (kwargs and kwargs.pop('name')) or lopt.__name__
-    compile.optdb['canonicalize'].register(name, lopt, 'fast_run', *tags)
-    return lopt
-
-
-def register_stabilize(lopt, *tags, **kwargs):
-    name = (kwargs and kwargs.pop('name')) or lopt.__name__
-    compile.optdb['stabilize'].register(name, lopt, 'fast_run', *tags)
-    return lopt
-
-
-def register_specialize(lopt, *tags, **kwargs):
-    name = (kwargs and kwargs.pop('name')) or lopt.__name__
-    compile.optdb['specialize'].register(name, lopt, 'fast_run', *tags)
-    return lopt
-
-
-def register_uncanonicalize(lopt, *tags, **kwargs):
-    name = (kwargs and kwargs.pop('name')) or lopt.__name__
-    compile.optdb['uncanonicalize'].register(name, lopt, 'fast_run', *tags)
-    return lopt
-
-
-def register_specialize_device(lopt, *tags, **kwargs):
-    name = (kwargs and kwargs.pop('name')) or lopt.__name__
-    compile.optdb['specialize_device'].register(name, lopt, 'fast_run', *tags)
-    return lopt
-
-
-## Register merge_optimizer as a global opt during canonicalize
-compile.optdb['canonicalize'].register(
-        'canon_merge', merge_optimizer, 'fast_run')
 
 
 #####################
