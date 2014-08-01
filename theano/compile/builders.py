@@ -1,6 +1,7 @@
 import theano
 from theano import config, gof
 from theano.compile.function_module import orig_function
+from theano.compile import mode
 from theano.compile import SharedVariable, rebuild_collect_shared
 from theano.gof import ops_with_inner_function
 
@@ -195,3 +196,15 @@ class OpFromGraph(gof.Op):
 # Since OpFromGraph contains a Theano compiled function, we should let
 # DebugMode know about it
 ops_with_inner_function[OpFromGraph] = 'fn'
+
+
+@mode.register_canonicalize
+@gof.local_optimizer([OpFromGraph])
+def local_useless_OpFromGraph(node):
+    """
+    Remove OpFromGraph that do nothing.
+    """
+    if isinstance(node.op, OpFromGraph):
+        if len(theano.gof.graph.ancestors(node.op.outputs,
+                                          node.op.inputs)) == 0:
+            import pdb;pdb.set_trace()
