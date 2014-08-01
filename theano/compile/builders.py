@@ -163,10 +163,6 @@ class OpFromGraph(gof.Op):
     def perform(self, node, inputs, outputs):
         variables = self.fn(*inputs)
         assert len(variables) == len(outputs)
-        for output, variable in zip(outputs, variables):
-            ##TODO: when function's output-borrowing semantics are correct,
-            # we wont need this copy anymore
-            output[0] = variable.copy()
 
     def grad(self, inputs, output_grads):
         # OpFromGraph doesn't implement a connection_pattern, so for
