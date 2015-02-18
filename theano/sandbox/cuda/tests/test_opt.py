@@ -740,6 +740,34 @@ def test_local_gpu_dot_to_dot22dot():
     cmp((3, 4), (4,))
 
 
+def test_fusion_outputs():
+    aval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    bval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    cval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    a = cuda.shared_constructor(aval, 'a')
+    b = cuda.shared_constructor(bval, 'b')
+    c = cuda.shared_constructor(bval, 'c')
+
+    outs = [a + 1, theano.tensor.tanh(b), (a + 1) * numpy.float32(1.3)]
+    if False:
+        f = pfunc([], outs, mode=mode_with_gpu)
+        res = f()
+        assert len([n for n in f.maker.fgraph.apply_nodes
+                    if isinstance(n.op, cuda.GpuElemwise)]) == 2
+        assert numpy.allclose(aval + 1, res[0])
+        assert numpy.allclose(numpy.tanh(bval), res[1])
+        assert numpy.allclose((aval + 1) * 1.3, res[2])
+
+    # Trigger remove of common inputs.
+#    outs = [a + 1, theano.tensor.tanh(b), (a + 1) * numpy.float32(1.3), (a+1)+a]# need merge with inputs
+    outs = [a + b, (a+b)+(a+c)]
+    f = pfunc([], outs, mode=mode_with_gpu)
+    f()
+    theano.printing.debugprint(f)
+
 class test_diag(theano.tensor.tests.test_nlinalg.test_diag):
     mode = mode_with_gpu
     shared = staticmethod(cuda.shared_constructor)

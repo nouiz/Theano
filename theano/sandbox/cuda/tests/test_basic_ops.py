@@ -416,6 +416,34 @@ def test_elemwise_empty():
     assert numpy.all(a0 + 1.0 == a.get_value())
 
 
+# TODO test dimensions collapsing with multiple output not the same strides
+def test_elemwise_multiple_outputs():
+    aval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    bval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    a = tcn.shared_constructor(aval, 'a')
+    b = tcn.shared_constructor(bval, 'a')
+
+    x = theano.scalar.float32()
+    y = theano.scalar.float32()
+    """
+o0_data[i] = i0_data[i] + 1;
+o1_data[i] = tanh(i1_data[i]);
+o2_data[i] = o0_data[i] * 1.3;
+    """
+    C = theano.scalar.Composite([x, y],
+                                [x+1, theano.scalar.tanh(y), (x+1)*1.3])
+    outs = cuda.GpuElemwise(C)(a, b)
+    f = pfunc([], outs, mode=mode_with_gpu)
+    res = f()
+    assert len(f.maker.fgraph.toposort()) == 1
+    theano.printing.debugprint(f)
+    assert numpy.allclose(aval + 1, res[0])
+    assert numpy.allclose(numpy.tanh(bval), res[1])
+    assert numpy.allclose((aval + 1) * 1.3, res[2])
+
+
 def test_elemwise0():
 
     a = tcn.shared_constructor(theano._asarray(numpy.random.rand(4, 4),
