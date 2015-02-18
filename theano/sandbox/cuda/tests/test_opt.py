@@ -775,6 +775,62 @@ def test_local_gpu_dot_to_dot22dot():
     cmp((3, 4), (4,))
 
 
+def test_fusion_outputs():
+    aval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    bval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    cval = theano._asarray(numpy.random.rand(3, 2),
+                           dtype='float32')
+    a = cuda.shared_constructor(aval, 'a')
+    b = cuda.shared_constructor(bval, 'b')
+    c = cuda.shared_constructor(bval, 'c')
+
+    outs = [a + 1, theano.tensor.tanh(b), (a + 1) * numpy.float32(1.3)]
+    if True:
+        f = pfunc([], outs, mode=mode_with_gpu)
+        res = f()
+        assert len([n for n in f.maker.fgraph.apply_nodes
+                    if isinstance(n.op, cuda.GpuElemwise)]) == 2
+        utt.assert_allclose(aval + 1, res[0])
+        utt.assert_allclose(numpy.tanh(bval), res[1])
+        utt.assert_allclose((aval + 1) * 1.3, res[2])
+
+    # Trigger remove of common inputs.
+    outs = [a + 1, theano.tensor.tanh(b), (a + 1) * numpy.float32(1.3),
+            (a+1)+a]  # need merge with inputs
+#    outs = [a + b, (a+b)+(a+c)]
+    f = pfunc([], outs, mode=mode_with_gpu)
+    theano.printing.debugprint(f)
+#    assert len([n for n in f.maker.fgraph.apply_nodes
+#                if isinstance(n.op, cuda.GpuElemwise)]) == 2
+    # TODO add missing assert for common inputs
+    f()
+    #import pdb;pdb.set_trace()
+    pass
+
+    # Don't merge when only shared are scalar constant inputs.
+    outs = [a + 1, b + 1]
+    f = pfunc([], outs, mode=mode_with_gpu)
+    theano.printing.debugprint(f)
+    assert len([n for n in f.maker.fgraph.apply_nodes
+                if isinstance(n.op, cuda.GpuElemwise)]) == 2
+    f()
+    #import pdb;pdb.set_trace()
+    pass
+    return
+    # Merge when only shared are non-scalar constant inputs.
+    cst = numpy.arange(6, dtype='float32').reshape(3, 2)
+    outs = [a + cst, b + cst]
+    f = pfunc([], outs, mode=mode_with_gpu)
+    assert len([n for n in f.maker.fgraph.apply_nodes
+                if isinstance(n.op, cuda.GpuElemwise)]) == 1
+    f()
+    theano.printing.debugprint(f)
+    import pdb;pdb.set_trace()
+    pass
+
+
 class test_diag(theano.tensor.tests.test_nlinalg.test_diag):
     mode = mode_with_gpu
     shared = staticmethod(cuda.shared_constructor)

@@ -5717,7 +5717,7 @@ def local_elemwise_fusion_op(OP, max_input_fct=lambda node: 32,
                     # broadcastable pattern to don't redo duplicate
                     # computation due to broadcast.
                     i.owner.outputs[0].broadcastable ==
-                    node.outputs[0].broadcastable):
+                node.outputs[0].broadcastable):
                 do_fusion = True
                 try:
                     tmp_s_input = []

@@ -16,6 +16,7 @@ from theano import config, tensor, gof
 import theano.ifelse
 
 from six.moves import reduce, xrange
+from theano.compat import OrderedDict
 from theano.compile import optdb
 from theano.gof import (local_optimizer, EquilibriumDB, ProxyDB,
                         Optimizer, toolbox)
@@ -326,6 +327,93 @@ def local_gpu_elemwise_1(node):
                     return False
                 return [gpu_elemwise.outputs[0]]
     return False
+
+
+@local_optimizer([GpuElemwise], inplace=True)
+def local_gpu_elemwise_fusion_outputs(node):
+    """Fuse elemwise that generate multiple outputs.
+
+    :note: There is an optimization that fuse consecutive elemwise
+        that we support is applied before.
+
+    """
+    if not isinstance(node.op, GpuElemwise):
+        return
+    for idx_out, out in enumerate(node.outputs):
+        cl = [(n, pos) for n, pos in out.clients
+              if n != 'output' and isinstance(n.op, GpuElemwise) and
+              # fuse only GpuElemwise with the same outputs broadcast
+              # pattern.
+              n.outputs[0].type == node.outputs[0].type
+        ]
+        if len(cl) == 0:
+            continue
+
+        # For now we merge only 1 per optimization call.
+        # We support later call will finish the work.
+        for candidate, pos in cl:
+            # build the scalar graph of the current node
+            sinp = [theano.scalar.Scalar(i.dtype)() for i in node.inputs]
+            sout = node.op.scalar_op(*sinp, return_list=True)
+
+            # build the scalar graph of the candidate that reuse the
+            csinp = [theano.scalar.Scalar(i.dtype)() for i in candidate.inputs]
+
+            # Substitute the candidate output as a new inputs.
+            csinp[pos] = sout[idx_out]
+            # TODO: merge common inputs
+            if True:
+                for inter in set(node.inputs).intersection(candidate.inputs):
+                    p = candidate.inputs.index(inter)
+                    csinp[p] = sinp[node.inputs.index(inter)]
+#                    import pdb;pdb.set_trace()
+            csout = candidate.op.scalar_op(*csinp, return_list=True)
+
+            new_csinp = csinp
+            # Remove the input that is ...
+            del new_csinp[pos]
+            if True:
+                n = []
+                for s in new_csinp:
+                    if s not in sinp:
+                        n.append(s)
+                new_csinp = n
+            # if len(out.clients) == 1: This case handled by the fusion with inputs.
+            C = theano.scalar.Composite(sinp + new_csinp, sout + csout)
+            new_in = candidate.inputs[0:pos] + candidate.inputs[pos + 1:]
+            if True:
+                n = []
+                for i in new_in:
+                    if i not in node.inputs:
+                        n.append(i)
+                new_in = n
+            new_in = node.inputs + new_in
+            assert len(new_in) == len(sinp + new_csinp)
+            e = GpuElemwise(C)(*new_in)
+            new_out = node.outputs + candidate.outputs
+            assert len(new_out) == len(e)
+            ret = OrderedDict(zip(new_out, e))
+            for k, v in ret.items():
+                if k.type != v.type:
+                    import pdb;pdb.set_trace()
+            print(node)
+            print(candidate)
+            print(new_in)
+            import pdb;pdb.set_trace()
+            if len (new_out) > 4 or len(new_in) > 16:
+                return
+            assert len(new_out) == len(e)
+            return OrderedDict(zip(new_out, e))
+
+# Currently, the normal fusion opt do not handle elemwise with multiple outputs.
+# Should be after gpu_elemwise_fusion(49)
+# We register it after, as this opt could raise memory usage, but not the previous one.
+if False:
+    theano.compile.optdb.register(
+        'local_gpu_elemwise_fusion_outputs',
+        theano.tensor.opt.in2out(local_gpu_elemwise_fusion_outputs), 49.1,
+        'fusion',
+        'fast_run', 'inplace', 'gpu')
 
 
 @register_opt()
