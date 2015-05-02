@@ -249,7 +249,7 @@ class FunctionGraph(utils.object2):
     def __import_r__(self, variables, reason):
         global NullType
         if NullType is None:
-            from null_type import NullType
+            from .null_type import NullType
         # Imports the owners of the variables
         for apply_node in [r.owner for r in variables if r.owner is not None]:
             if apply_node not in self.apply_nodes:
