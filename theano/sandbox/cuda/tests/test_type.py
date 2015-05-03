@@ -1,4 +1,4 @@
-import cPickle
+import theano.compat.six.moves.cPickle as pickle
 import os.path
 import sys
 
@@ -35,11 +35,11 @@ def test_unpickle_cudandarray_as_numpy_ndarray_flag0():
 
         with open(os.path.join(testfile_dir, fname), 'rb') as fp:
             if cuda_available:
-                mat = cPickle.load(fp)
+                mat = pickle.load(fp)
                 assert isinstance(mat, CudaNdarray)
                 assert numpy.asarray(mat)[0] == -42.0
             else:
-                assert_raises(ImportError, cPickle.load, fp)
+                assert_raises(ImportError, pickle.load, fp)
 
     finally:
         config.experimental.unpickle_gpu_on_cpu = oldflag
@@ -56,7 +56,7 @@ def test_unpickle_cudandarray_as_numpy_ndarray_flag1():
             fname = 'CudaNdarray_py3.pkl'
 
         with open(os.path.join(testfile_dir, fname), 'rb') as fp:
-            mat = cPickle.load(fp)
+            mat = pickle.load(fp)
 
         assert isinstance(mat, numpy.ndarray)
         assert mat[0] == -42.0
