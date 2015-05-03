@@ -753,7 +753,7 @@ def pre_constant_merge(vars):
                 var.owner.inputs[idx] = recursive_merge(inp)
         return var
 
-    return map(recursive_merge, vars)
+    return list(map(recursive_merge, vars))
 
 
 ########################

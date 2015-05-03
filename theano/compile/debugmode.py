@@ -737,7 +737,7 @@ def _optcheck_fgraph(input_specs, output_specs, accept_inplace=False):
     for feature in std_fgraph.features:
         fgraph.attach_feature(feature())
 
-    return fgraph, map(SymbolicOutput, updates), equivalence_tracker
+    return fgraph, list(map(SymbolicOutput, updates)), equivalence_tracker
 
 
 class DataDestroyed():
