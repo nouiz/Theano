@@ -16,6 +16,7 @@ from theano import config
 import warnings
 
 from theano.compat import OrderedDict
+from six import iteritems
 from six.moves import StringIO
 from theano.misc.ordered_set import OrderedSet
 
@@ -642,7 +643,7 @@ class FunctionGraph(utils.object2):
                                     str(feature.orderings) +
                                     ". Nondeterministic object is " +
                                     str(orderings))
-                for node, prereqs in orderings.items():
+                for node, prereqs in iteritems(orderings):
                     if not isinstance(prereqs, (list, OrderedSet)):
                         raise TypeError(
                             "prereqs must be a type with a "
@@ -650,7 +651,7 @@ class FunctionGraph(utils.object2):
                             " will be non-deterministic.")
                     ords.setdefault(node, []).extend(prereqs)
         # eliminate duplicate prereqs
-        for (node, prereqs) in ords.items():
+        for (node, prereqs) in iteritems(ords):
             ords[node] = list(OrderedSet(prereqs))
         return ords
 

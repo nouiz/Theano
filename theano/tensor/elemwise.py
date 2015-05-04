@@ -562,7 +562,7 @@ class Elemwise(OpenMPOp):
         # inplace_pattern maps output idx -> input idx
         inplace_pattern = self.inplace_pattern
         if inplace_pattern:
-            for overwriter, overwritten in inplace_pattern.items():
+            for overwriter, overwritten in iteritems(inplace_pattern):
                 for ob, ib in izip(out_broadcastables[overwriter],
                                   inputs[overwritten].type.broadcastable):
                     if ib and not ob:

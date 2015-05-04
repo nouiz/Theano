@@ -67,7 +67,7 @@ from theano import tensor
 from theano.tensor import opt, get_scalar_constant_value
 from theano import gof
 from theano.compat import OrderedDict
-from six import integer_types
+from six import integer_types, iteritems
 from theano.gof.opt import Optimizer
 from theano.gof import toolbox, DestroyHandler, InconsistencyError
 from theano.compile import optdb
@@ -1410,7 +1410,7 @@ class ScanSaveMem(gof.Optimizer):
             (inps, outs, info, node_ins, compress_map) = \
                     scan_utils.compress_outs(op, not_required, nw_inputs)
             inv_compress_map = OrderedDict()
-            for k, v in compress_map.items():
+            for k, v in iteritems(compress_map):
                 inv_compress_map[v] = k
 
             node_ins = [pre_greedy_local_optimizer(list_opt_slice, x) for x in

@@ -253,7 +253,7 @@ class ProfileStats(object):
         """dict op -> total time on thunks"""
         # timing is stored by node, we compute timing by class on demand
         rval = {}
-        for node, t in self.apply_time.items():
+        for node, t in iteritems(self.apply_time):
             typ = type(node.op)
             rval.setdefault(typ, 0)
             rval[typ] += t
@@ -263,7 +263,7 @@ class ProfileStats(object):
         """dict op -> total number of thunk calls"""
         # timing is stored by node, we compute timing by class on demand
         rval = {}
-        for node, count in self.apply_callcount.items():
+        for node, count in iteritems(self.apply_callcount):
             typ = type(node.op)
             rval.setdefault(typ, 0)
             rval[typ] += count
@@ -273,7 +273,7 @@ class ProfileStats(object):
         """dict op -> total number of nodes"""
         # timing is stored by node, we compute timing by class on demand
         rval = {}
-        for node, count in self.apply_callcount.items():
+        for node, count in iteritems(self.apply_callcount):
             typ = type(node.op)
             rval.setdefault(typ, 0)
             rval[typ] += 1
@@ -298,7 +298,7 @@ class ProfileStats(object):
         """dict op -> total time on thunks"""
         # timing is stored by node, we compute timing by Op on demand
         rval = {}
-        for node, t in self.apply_time.items():
+        for node, t in iteritems(self.apply_time):
             rval.setdefault(node.op, 0)
             rval[node.op] += t
         return rval
@@ -326,7 +326,7 @@ class ProfileStats(object):
         """dict op -> total number of thunk calls"""
         # timing is stored by node, we compute timing by Op on demand
         rval = {}
-        for node, count in self.apply_callcount.items():
+        for node, count in iteritems(self.apply_callcount):
             rval.setdefault(node.op, 0)
             rval[node.op] += count
         return rval
@@ -335,7 +335,7 @@ class ProfileStats(object):
         """dict op -> total number of nodes"""
         # timing is stored by node, we compute timing by Op on demand
         rval = {}
-        for node, count in self.apply_callcount.items():
+        for node, count in iteritems(self.apply_callcount):
             rval.setdefault(node.op, 0)
             rval[node.op] += 1
         return rval
@@ -564,7 +564,7 @@ class ProfileStats(object):
 
         topos = {}  # Only do the topo once per fct.
         atimes = []
-        for a, t in self.apply_time.items():
+        for a, t in iteritems(self.apply_time):
             if a.fgraph not in topos:
                 topo = a.fgraph.toposort()
                 topos[a.fgraph] = topo
@@ -1033,8 +1033,8 @@ class ProfileStats(object):
 
         for fgraph, nodes_mem in iteritems(fct_memory):
             # Sum of the size of all variables in bytes
-            sum_size = sum([sum([v for v in val if not isinstance(v, str)])
-                            for key, val in iteritems(nodes_mem)])
+            sum_size = sum(sum(v for v in val if not isinstance(v, str))
+                           for key, val in iteritems(nodes_mem))
 
             order = fgraph.toposort()
             # A list of intermediate variable that are not need
@@ -1273,7 +1273,7 @@ if False:  # old code still to be ported from ProfileMode
         sop_op = {}
         # map each op class to Bool. True iff all applies were done in c.
         sop_c = {}
-        for a, t in op_time.items():
+        for a, t in iteritems(op_time):
             typ = type(a)
             sop_time.setdefault(typ, 0)
             sop_time[typ] += t
@@ -1526,13 +1526,13 @@ if False:  # old code still to be ported from ProfileMode
         def diff_dict(a_time, b_time_):
             r = {}
             b_time = copy.copy(b_time_)
-            for a, ta in a_time.items():
+            for a, ta in iteritems(a_time):
                 r.setdefault(a, 0)
                 tb = b_time.pop(a, 0)
                 r[a] += ta - tb
 
             # they are missing in a
-            for a, t in b_time.items():
+            for a, t in iteritems(b_time):
                 r.setdefault(a, 0)
                 r[a] += t
             return r

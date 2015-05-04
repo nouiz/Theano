@@ -4,12 +4,12 @@ import logging
 import sys
 
 import numpy
+from six import iteritems
+from six.moves import StringIO, xrange
 
 import theano
-
 from theano import gof, Type, Apply
 from theano import tensor, scalar, config
-from six.moves import StringIO, xrange
 from theano.gradient import grad_undefined
 from theano.scalar import Scalar
 
@@ -3827,7 +3827,7 @@ def profile_printer(fct_name, compile_time, fct_call_time, fct_call,
         cpu = 0
         gpu = 0
         trans = 0
-        for (_, node), t in apply_time.items():
+        for (_, node), t in iteritems(apply_time):
             if isinstance(node.op.__class__.__name__,
                           (HostFromGpu, GpuFromHost)):
                 trans += t

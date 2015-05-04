@@ -7,7 +7,7 @@ import warnings
 
 import theano
 from theano.gof.link import WrapLinker
-from six import string_types, iteritems
+from six import string_types, iteritems, itervalues
 from theano.compile.mode import (Mode, register_mode,
                                  predefined_modes, predefined_linkers,
                                  predefined_optimizers)
@@ -250,21 +250,21 @@ class ProfileMode(Mode):
                               for (fn, ps) in self.profile_stats.items()])
 
         apply_time = {}
-        for fn, ps in self.profile_stats.items():
+        for fn, ps in iteritems(self.profile_stats):
             for (i, node) in enumerate(fn.maker.fgraph.toposort()):
                 apply_time[(i, node)] = ps.apply_time[node]
-        for (i, n), t in apply_time.items():
+        for (i, n), t in iteritems(apply_time):
             if t == 0:
                 print(i, n)
 
         apply_cimpl = {}
-        for fn, ps in self.profile_stats.items():
+        for ps in itervalues(self.profile_stats):
             apply_cimpl.update(ps.apply_cimpl)
 
         message = self.message
 
         variable_shape = {}
-        for fn, ps in self.profile_stats.items():
+        for ps in itervalues(self.profile_stats):
             variable_shape.update(ps.variable_shape)
 
         other_time = dict(
@@ -297,13 +297,13 @@ class ProfileMode(Mode):
         def diff_dict(a_time, b_time_):
             r = {}
             b_time = copy.copy(b_time_)
-            for a, ta in a_time.items():
+            for a, ta in iteritems(a_time):
                 r.setdefault(a, 0)
                 tb = b_time.pop(a, 0)
                 r[a] += ta - tb
 
             # they are missing in a
-            for a, t in b_time.items():
+            for a, t in iteritems(b_time):
                 r.setdefault(a, 0)
                 r[a] += t
             return r
@@ -416,7 +416,7 @@ class ProfileMode(Mode):
         op_apply = {}
         op_cimpl = {}
         sop_apply = {}
-        for (i, a), t in apply_time.items():
+        for (i, a), t in iteritems(apply_time):
             op = a.op
             op_time.setdefault(op, 0)
             op_call.setdefault(op, 0)
@@ -440,7 +440,7 @@ class ProfileMode(Mode):
         sop_op = {}
         # map each op class to Bool. True iff all applies were done in c.
         sop_cimpl = {}
-        for a, t in op_time.items():
+        for a, t in iteritems(op_time):
             typ = type(a)
             sop_time.setdefault(typ, 0)
             sop_time[typ] += t
@@ -484,7 +484,7 @@ class ProfileMode(Mode):
 
         # The summary per op
         op_flops = {}
-        for a, t in op_time.items():
+        for a, t in iteritems(op_time):
             if hasattr(a, 'flops'):
                 op_flops[a] = a.flops*op_call[a]/t/1e6
         flops_msg = ''

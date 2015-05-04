@@ -519,7 +519,7 @@ def cond_merge_ifs_true(node):
         return False
 
     old_ins = list(node.inputs)
-    for pos, var in replace.items():
+    for pos, var in iteritems(replace):
         old_ins[pos] = var
     return op(*old_ins, **dict(return_list=True))
 
@@ -544,7 +544,7 @@ def cond_merge_ifs_false(node):
         return False
 
     old_ins = list(node.inputs)
-    for pos, var in replace.items():
+    for pos, var in iteritems(replace):
         old_ins[pos] = var
     return op(*old_ins, **dict(return_list=True))
 

@@ -3,7 +3,8 @@
 from __future__ import print_function
 
 import copy
-from six import iteritems
+from six import string_types, iteritems
+from six.moves import xrange
 import six.moves.copyreg as copyreg
 import six.moves.cPickle as pickle
 import itertools
@@ -15,8 +16,6 @@ import theano
 from theano import gof
 from functools import partial
 from theano.compat import izip
-from six import string_types
-from six.moves import xrange
 import theano.compile.mode
 from theano.compile.io import (
     In, SymbolicInput, SymbolicInputKit, SymbolicOutput)

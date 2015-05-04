@@ -854,9 +854,9 @@ class VM_Linker(link.LocalLinker):
 
             nodes_idx_inv = {}
             vars_idx_inv = {}
-            for (node, i) in nodes_idx.items():
+            for (node, i) in iteritems(nodes_idx):
                 nodes_idx_inv[i] = node
-            for (var, i) in vars_idx.items():
+            for (var, i) in iteritems(vars_idx):
                 vars_idx_inv[i] = var
 
             # put storage_map and compute_map into a int-based scheme
@@ -892,7 +892,7 @@ class VM_Linker(link.LocalLinker):
 
             # build the var owner array
             var_owner = [None] * len(vars_idx)
-            for (var, i) in vars_idx.items():
+            for (var, i) in iteritems(vars_idx):
                 if var.owner:
                     var_owner[i] = nodes_idx[var.owner]
 
@@ -920,7 +920,7 @@ class VM_Linker(link.LocalLinker):
             # values of the update expressions).
             update_storage = []
             update_in_from_out = {}
-            for (ivar, ovar) in updated_vars.items():
+            for (ivar, ovar) in iteritems(updated_vars):
                 update_in_from_out[vars_idx[ovar]] = vars_idx[ivar]
             for oidx in output_vars:
                 if oidx in update_in_from_out:
