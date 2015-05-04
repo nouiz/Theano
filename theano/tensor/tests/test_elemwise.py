@@ -1,6 +1,5 @@
 import theano.compat.six.moves.cPickle as pickle
 from copy import copy
-from itertools import imap
 import unittest
 
 import numpy
@@ -8,6 +7,7 @@ from nose.plugins.skip import SkipTest
 from nose.plugins.attrib import attr
 
 import theano
+from theano.compat import imap
 from theano import gof, scalar, config
 
 from theano import tensor
