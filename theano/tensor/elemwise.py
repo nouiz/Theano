@@ -787,7 +787,7 @@ class Elemwise(OpenMPOp):
             super(Elemwise, self).perform(node, inputs, output_storage)
 
         maxsize = max(len(input.shape) for input in inputs)
-        for dims in izip(*[zip(input.shape, sinput.type.broadcastable)
+        for dims in izip(*[list(zip(input.shape, sinput.type.broadcastable))
                           for input, sinput in zip(inputs, node.inputs)]):
             if max(d for d, b in dims) != 1 and (1, False) in dims:
                 # yes there may be more compact ways to write this code,
@@ -948,8 +948,9 @@ class Elemwise(OpenMPOp):
 
         # These are the outputs that we will need to allocate
         # (output, name, name of the c type), transposed
-        real = zip(*[(r, s, r.type.dtype_specs()[1])
-                     for r, s in izip(node.outputs, onames) if r not in dmap])
+        real = list(zip(*[(r, s, r.type.dtype_specs()[1])
+                          for r, s in izip(node.outputs, onames)
+                          if r not in dmap]))
         if real:
             real_outputs, real_onames, real_odtypes = real
         else:
@@ -958,8 +959,9 @@ class Elemwise(OpenMPOp):
         # Outputs that are aliased with an input (inplace)
         # (output, name), transposed (c type name not needed since we don't
         # need to allocate.
-        aliased = zip(*[(r, s)
-                        for (r, s) in izip(node.outputs, onames) if r in dmap])
+        aliased = list(zip(*[(r, s)
+                             for (r, s) in izip(node.outputs, onames)
+                             if r in dmap]))
         if aliased:
             aliased_outputs, aliased_onames = aliased
         else:
@@ -985,7 +987,7 @@ class Elemwise(OpenMPOp):
 
         # Check if all inputs (except broadcasted scalar) are fortran.
         # In that case, create an fortran output ndarray.
-        z = zip(inames, inputs)
+        z = list(zip(inames, inputs))
         alloc_fortran = ' && '.join(["PyArray_ISFORTRAN(%s)" % arr
                                      for arr, var in z
                                      if not all(var.broadcastable)])
@@ -1156,7 +1158,7 @@ class Elemwise(OpenMPOp):
                     }
                     """ % locals()
             if contig is not None:
-                z = zip(inames + onames, inputs + node.outputs)
+                z = list(zip(inames + onames, inputs + node.outputs))
                 cond1 = ' && '.join(["PyArray_ISCONTIGUOUS(%s)" % arr
                                     for arr, var in z
                                     if not all(var.broadcastable)])
