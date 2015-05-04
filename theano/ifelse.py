@@ -642,7 +642,7 @@ def cond_remove_identical(node):
 
     rval = []
     for idx in xrange(len(node.outputs)):
-        if idx in out_map.keys():
+        if idx in out_map:
             rval += [new_outs[inv_map[out_map[idx]]]]
         else:
             rval += [new_outs[inv_map[idx]]]

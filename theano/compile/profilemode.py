@@ -399,7 +399,7 @@ class ProfileMode(Mode):
         print('Theano fct summary:')
         print('<% total fct time> <total time> <time per call> <nb call> '
               '<fct name>')
-        for key in fct_call.keys():
+        for key in fct_call:
             if fct_call[key] > 0:
                 print('   %4.1f%% %.3fs %.2es %d %s' %
                       (fct_call_time[key]/total_fct_time*100,

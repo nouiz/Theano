@@ -189,7 +189,7 @@ def raise_with_op(node, thunk=None, exc_info=None, storage_map=None):
         storage_map_list = []
         total_size = 0
         total_size_inputs = 0
-        for k in storage_map.keys():
+        for k in storage_map:
             storage_map_item = []
 
             # storage_map_item[0]: the variable

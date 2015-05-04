@@ -309,7 +309,7 @@ class ProfileStats(object):
         total = self.apply_time[node]
         for parent in node.get_parents():
             if parent.owner in self.apply_time.keys():
-                if parent.owner not in total_times.keys():
+                if parent.owner not in total_times:
                     self.fill_node_total_time(parent.owner, total_times)
                 total += total_times[parent.owner]
         total_times[node] = total
@@ -1311,7 +1311,7 @@ if False:  # old code still to be ported from ProfileMode
         other_time = total_time - total_fct_time - compile_time
         print()
         print('Theano fct summary: <% total fct time> <total time> <time per call> <nb call> <fct name>')
-        for key in fct_call.keys():
+        for key in fct_call:
             if fct_call[key] > 0:
                 print('   %4.1f%% %.3fs %.2es %d %s' % (
                     fct_call_time[key] / total_fct_time * 100,
@@ -1344,7 +1344,7 @@ if False:  # old code still to be ported from ProfileMode
         print()
         print("List of apply that don't have float64 as input but have float64 in outputs. Usefull to know if we forgot some cast when using floatX=float32 or gpu code.")
         print('<Apply> <Apply position> <fct name> <inputs type> <outputs type>')
-        for fct in fct_call.keys():
+        for fct in fct_call:
             for idx, node in enumerate(fct.maker.fgraph.toposort()):
                 if any(hasattr(i, 'dtype') and i.dtype == 'float64' for i in node.outputs) and not any(hasattr(i, 'dtype') and i.dtype == 'float64' for i in node.inputs):
                     print(str(node), idx, fct.name, str([getattr(i, 'dtype', None) for i in node.inputs]), str([getattr(i, 'dtype', None) for i in node.outputs]))
@@ -1370,7 +1370,7 @@ if False:  # old code still to be ported from ProfileMode
 
             print("Theano function input that are float64")
             print("<fct name> <input name> <input type> <str input>")
-            for fct in fct_call.keys():
+            for fct in fct_call:
                 for i in fct.input_storage:
                     if hasattr(i.type, 'dtype') and i.type.dtype == 'float64':
                         print(fct.name, i.name, i.type, i)

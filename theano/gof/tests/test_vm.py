@@ -360,7 +360,7 @@ def test_reallocation():
 
         def check_storage(storage_map):
             from theano.tensor.var import TensorConstant
-            for i in storage_map.keys():
+            for i in storage_map:
                 if not isinstance(i, TensorConstant):
                     keys_copy = storage_map.keys()[:]
                     keys_copy.remove(i)

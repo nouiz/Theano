@@ -476,7 +476,7 @@ returned directly?"""
                 self.n_returned_outputs -= 1
 
         for node in self.maker.fgraph.apply_nodes:
-            if node.op in ops_with_inner_function.keys():
+            if node.op in ops_with_inner_function:
                 self.nodes_with_inner_function.append(node.op)
 
     def __contains__(self, item):

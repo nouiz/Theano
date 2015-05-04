@@ -3843,7 +3843,7 @@ def profile_printer(fct_name, compile_time, fct_call_time, fct_call,
         print()
         print("    Theano function input that are float64")
         print("    <fct name> <input name> <input type> <str input>")
-        for fct in fct_call.keys():
+        for fct in fct_call:
             for i in fct.input_storage:
                 if hasattr(i.type, 'dtype') and i.type.dtype == 'float64':
                     print('        ', fct.name, i.name, i.type, i)
@@ -3852,7 +3852,7 @@ def profile_printer(fct_name, compile_time, fct_call_time, fct_call,
         print("    List of apply that don't have float64 as input but have float64 in outputs")
         print("    (Useful to know if we forgot some cast when using floatX=float32 or gpu code)")
         print('    <Apply> <Apply position> <fct name> <inputs type> <outputs type>')
-        for fct in fct_call.keys():
+        for fct in fct_call:
             for idx, node in enumerate(fct.maker.fgraph.toposort()):
                 if (any(hasattr(i, 'dtype') and i.dtype == 'float64'
                         for i in node.outputs) and
