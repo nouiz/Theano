@@ -930,7 +930,7 @@ class Elemwise(OpenMPOp):
         # assert that inames and inputs order stay consistent.
         # This is to protect again futur change of uniq.
         assert len(inames) == len(inputs)
-        ii, iii = zip(*gof.utils.uniq(zip(_inames, node.inputs)))
+        ii, iii = list(zip(*gof.utils.uniq(list(zip(_inames, node.inputs)))))
         assert all([x == y for x, y in zip(ii, inames)])
         assert all([x == y for x, y in zip(iii, inputs)])
 
