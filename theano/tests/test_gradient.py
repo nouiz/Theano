@@ -599,7 +599,7 @@ def test_subgraph_grad():
             wrt=params[i], end=grad_ends[i],
             start=next_grad, cost=costs[i]
         )
-        next_grad = OrderedDict(zip(grad_ends[i], next_grad))
+        next_grad = OrderedDict(izip(grad_ends[i], next_grad))
         param_grads.extend(param_grad)
     
     pgrads = theano.function(inputs, param_grads)
