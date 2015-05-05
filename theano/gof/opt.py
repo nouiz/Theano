@@ -1005,7 +1005,6 @@ class _LocalOpKeyOptGroup(LocalOptGroup):
 
     def __init__(self, optimizers):
         if any(not hasattr(opt, 'op_key'), optimizers):
-from six import itervalues
             raise TypeError(
                 "All LocalOptimizers passed here must have an op_key method.")
         CompositeLocalOptimizer.__init__(self, optimizers)
