@@ -18,7 +18,7 @@ import numpy
 import theano
 from theano import config
 from theano.compat import izip
-from six import string_types, iteritems
+from six import string_types, iteritems, itervalues
 from six.moves import reduce
 from theano.gof import graph, op, utils, unify, toolbox
 from theano.gof.fg import InconsistencyError
@@ -1005,6 +1005,7 @@ class _LocalOpKeyOptGroup(LocalOptGroup):
 
     def __init__(self, optimizers):
         if any(not hasattr(opt, 'op_key'), optimizers):
+from six import itervalues
             raise TypeError(
                 "All LocalOptimizers passed here must have an op_key method.")
         CompositeLocalOptimizer.__init__(self, optimizers)
@@ -1732,7 +1733,7 @@ class EquilibriumOptimizer(NavigatorOptimizer):
             yield opt
         # if repeat is not a problem we can drop the set
         s = set()
-        for lopt in self.local_optimizers_map.values():
+        for lopt in itervalues(self.local_optimizers_map):
             for opt in lopt:
                 if opt not in s:
                     yield opt

@@ -10,7 +10,7 @@ import sys
 import gc
 import logging
 import six.moves.copyreg as copyreg
-from itertools import product as itertools_product
+from itertools import chain, product as itertools_product
 from theano.compat import izip
 
 import numpy
@@ -18,7 +18,7 @@ import numpy
 import theano
 from theano import gof
 from theano.compat import get_unbound_function
-from six import string_types, iteritems
+from six import string_types, iteritems, itervalues
 from six.moves import StringIO, xrange
 from theano.gof import (FunctionGraph, graph, utils, link,
                         ops_with_inner_function)
@@ -1366,7 +1366,7 @@ def _check_preallocated_output(node, thunk, prealloc_modes, def_val,
         dmap = getattr(node.op, 'destroy_map', {})
         vmap = getattr(node.op, 'view_map', {})
         for i, r in enumerate(node.inputs):
-            if any(i in v for v in (dmap.values() + vmap.values())):
+            if any(i in v for v in chain(itervalues(dmap, itervalues(vmap)))):
                 aliased_inputs.add(r)
 
         _logger.debug('starting preallocated output checking')
@@ -1986,8 +1986,8 @@ class _Linker(gof.link.LocalLinker):
                                 # as viewd are unsafe too, because the
                                 # corresponding output can be
                                 # destroyed.
-                                if any(i in v for v in (dmap.values() +
-                                                        vmap.values())):
+                                if any(i in v for v in chain(dmap.values(),
+                                                             vmap.values())):
                                     storage_map[r][0] = _lessbroken_deepcopy(
                                         r_vals[r])
 

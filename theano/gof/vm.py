@@ -16,7 +16,7 @@ from theano.configparser import (config, AddConfigVar,
 
 import theano.gof.cmodule
 
-from six import iteritems
+from six import iteritems, itervalues
 from six.moves import xrange
 
 logger = logging.getLogger(__name__)
@@ -1036,7 +1036,7 @@ class VM_Linker(link.LocalLinker):
             lazy = not all([(not th.lazy) for th in thunks])
         if not (lazy or (config.profile and config.profile_memory) or
                 self.use_cloop or self.callback):
-            for pair in reallocated_info.values():
+            for pair in itervalues(reallocated_info):
                 storage_map[pair[1]] = storage_map[pair[0]]
 
         computed, last_user = link.gc_helper(order)
@@ -1048,7 +1048,7 @@ class VM_Linker(link.LocalLinker):
                     if (input in computed and
                             input not in fgraph.outputs and
                             node == last_user[input] and
-                            input not in reallocated_info.keys()):
+                            input not in reallocated_info):
                         clear_after_this_thunk.append(storage_map[input])
                 post_thunk_clear.append(clear_after_this_thunk)
         else:

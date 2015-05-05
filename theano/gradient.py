@@ -6,6 +6,7 @@ import time
 import warnings
 
 import numpy  # for numeric_grad
+from six import itervalues
 
 import theano
 
@@ -1011,7 +1012,7 @@ def _populate_grad_dict(var_to_app_to_idx,
                 # copies of each destroyed input.
                 try:
                     dinputs = [node.inputs[x[0]] for x in
-                               node.op.destroy_map.values()]
+                               itervalues(node.op.destroy_map)]
                 except AttributeError:
                     dinputs = []
 

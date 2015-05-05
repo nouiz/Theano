@@ -6,6 +6,7 @@ import unittest
 
 from nose.plugins.skip import SkipTest
 import numpy
+from six import itervalues
 
 from theano import function
 from theano.gof import vm
@@ -371,5 +372,5 @@ def test_reallocation():
             return [False, None]
 
         assert check_storage(storage_map)[0]
-        assert len(set([id(v) for v in
-                        storage_map.values()])) < len(storage_map)
+        assert len(set(id(v) for v in
+                       itervalues(storage_map))) < len(storage_map)

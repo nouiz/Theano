@@ -7,7 +7,7 @@ from six import string_types, iteritems
 from six.moves import xrange
 import six.moves.copyreg as copyreg
 import six.moves.cPickle as pickle
-import itertools
+from itertools import chain
 import time
 import warnings
 import numpy
@@ -64,7 +64,7 @@ def view_tree_set(v, treeset):
             continue
         vmap = getattr(cl.op, 'view_map', {})
         dmap = getattr(cl.op, 'destroy_map', {})
-        for opos, iposlist in vmap.items() + dmap.items():
+        for opos, iposlist in chain(iteritems(vmap), iteritems(dmap)):
             if v_input_pos_to_cl in iposlist:
                 if cl.outputs[opos] not in treeset:
                     view_tree_set(cl.outputs[opos], treeset)
@@ -714,7 +714,7 @@ returned directly?"""
         # 1.no allow_gc return False
         # 2.has allow_gc, if allow_gc is False, return True
         if not getattr(self.fn, 'allow_gc', True):
-            for key in self.fn.storage_map.keys():
+            for key in self.fn.storage_map:
                 if not isinstance(key, theano.gof.Constant):
                     self.fn.storage_map[key][0] = None
 

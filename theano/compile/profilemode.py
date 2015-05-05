@@ -129,7 +129,7 @@ class ProfileMode(Mode):
 
     def __get_local_time(self):
         rval = 0
-        for ps in self.profile_stats.values():
+        for ps in itervalues(self.profile_stats):
             rval += sum(ps.apply_time.values())
         return rval
     local_time = property(__get_local_time)
@@ -244,10 +244,10 @@ class ProfileMode(Mode):
                             in self.profile_stats.values()])
 
         fct_call = dict([(fn, ps.fct_callcount)
-                         for (fn, ps) in self.profile_stats.items()])
+                         for (fn, ps) in iteritems(self.profile_stats)])
 
         fct_call_time = dict([(fn, ps.fct_call_time)
-                              for (fn, ps) in self.profile_stats.items()])
+                              for (fn, ps) in iteritems(self.profile_stats)])
 
         apply_time = {}
         for fn, ps in iteritems(self.profile_stats):
@@ -423,7 +423,7 @@ class ProfileMode(Mode):
             op_apply.setdefault(op, 0)
             sop_apply.setdefault(type(a.op), 0)
             op_time[op] += t
-            nb_call = [v for k, v in fct_call.items()
+            nb_call = [v for k, v in iteritems(fct_call)
                        if k.maker.fgraph is a.fgraph][0]
             op_cimpl.setdefault(a.op, True)
             op_cimpl[a.op] = op_cimpl[a.op] and apply_cimpl.get(a, False)
@@ -457,7 +457,7 @@ class ProfileMode(Mode):
               '<self seconds> <cumulative seconds> <time per call> [*] '
               '<nb_call> <nb_op> <nb_apply> <Op name>')
         sotimes = [(t*100/local_time, t, a, sop_cimpl[a], sop_call[a],
-                    sop_op[a], sop_apply[a]) for a, t in sop_time.items()]
+                    sop_op[a], sop_apply[a]) for a, t in iteritems(sop_time)]
         sotimes.sort()
         sotimes.reverse()
         tot = 0
@@ -502,7 +502,7 @@ class ProfileMode(Mode):
 
         otimes = [(t*100/local_time, t, a, op_cimpl.get(a, 0),
                    op_call.get(a, 0), op_apply.get(a, 0))
-                  for a, t in op_time.items()]
+                  for a, t in iteritems(op_time)]
         otimes.sort()
         otimes.reverse()
         tot = 0
@@ -541,9 +541,9 @@ class ProfileMode(Mode):
                   '<apply time> <cumulative seconds> <time per call> [*] '
                   '<nb_call> <Apply position> <Apply Op name>')
             atimes = [(t*100/local_time, t, a,
-                       [v for k, v in fct_call.items()
+                       [v for k, v in iteritems(fct_call)
                         if k.maker.fgraph is a[1].fgraph][0])
-                      for a, t in apply_time.items()]
+                      for a, t in iteritems(apply_time)]
             atimes.sort()
             atimes.reverse()
             tot = 0

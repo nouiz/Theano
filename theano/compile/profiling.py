@@ -308,7 +308,7 @@ class ProfileStats(object):
         # timing is stored by node, we compute total time on demand
         total = self.apply_time[node]
         for parent in node.get_parents():
-            if parent.owner in self.apply_time.keys():
+            if parent.owner in self.apply_time:
                 if parent.owner not in total_times:
                     self.fill_node_total_time(parent.owner, total_times)
                 total += total_times[parent.owner]
@@ -317,7 +317,7 @@ class ProfileStats(object):
     def compute_total_times(self):
         """dict op -> total time icluding the time for parents"""
         rval = {}
-        for node in self.apply_time.keys():
+        for node in self.apply_time:
             if node not in rval:
                 self.fill_node_total_time(node, rval)
         return rval
@@ -372,7 +372,7 @@ class ProfileStats(object):
                    class_impl.get(clas, '  '),
                    class_call.get(clas, 0),
                    class_apply.get(clas, 0))
-                  for clas, t in class_time.items()]
+                  for clas, t in iteritems(class_time)]
         otimes.sort(key=lambda t: (t[1], t[4], t[5]), reverse=True)
         tot = 0
         print('Class', file=file)
@@ -454,7 +454,7 @@ class ProfileStats(object):
                    op_impl.get(op, '  '),
                    op_call.get(op, 0),
                    op_apply.get(op, 0))
-                  for op, t in op_time.items()]
+                  for op, t in iteritems(op_time)]
         otimes.sort(key=lambda t: (t[1], t[4], t[5]), reverse=True)
         tot = 0
         print('Ops', file=file)
@@ -664,14 +664,14 @@ class ProfileStats(object):
         var_mem = {}  # varible->size in bytes; don't include input variables
         node_mem = {}  # node->total outputs size (only dense outputs)
 
-        for node in self.apply_callcount.keys():
+        for node in self.apply_callcount:
             fct_memory.setdefault(node.fgraph, {})
             fct_memory[node.fgraph].setdefault(node, [])
             fct_shapes.setdefault(node.fgraph, {})
             fct_shapes[node.fgraph].setdefault(node, [])
             sum_dense = 0
             for out in node.outputs:
-                if out in self.variable_shape.keys():
+                if out in self.variable_shape:
                     sh = self.variable_shape[out]
                     if hasattr(out.type, 'get_size'):
                         v = out.type.get_size(sh)
@@ -1284,7 +1284,7 @@ if False:  # old code still to be ported from ProfileMode
             sop_call[typ] = sop_call.get(typ, 0) + op_call[a]
         print('\nSingle Op-wise summary: <% of local_time spent on this kind of Op> <cumulative %%> <self seconds> <cumulative seconds> <time per call> <nb_call> <nb_op> <nb_op> <Op name>')
         sotimes = [(t * 100 / local_time, t, a, sop_c[a],
-                    sop_call[a], sop_op[a]) for a, t in sop_time.items()]
+                    sop_call[a], sop_op[a]) for a, t in iteritems(sop_time)]
         sotimes.sort(key=lambda t: (t[1], t[4], t[5]), reverse=True)
         tot = 0
         for f, t, a, ci, nb_call, nb_op in sotimes[:n_ops_to_print]:

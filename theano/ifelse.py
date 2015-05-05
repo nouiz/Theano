@@ -22,6 +22,7 @@ from theano.tensor import TensorType
 from theano import gof
 from theano.gof import PureOp, Apply
 
+from six import iteritems
 from six.moves import xrange
 from theano.compile import optdb
 from theano.tensor import opt
@@ -515,7 +516,7 @@ def cond_merge_ifs_true(node):
                 ins_t = tval.owner.inputs[1:][:ins_op.n_outs]
                 replace[idx + 1] = ins_t[tval.owner.outputs.index(tval)]
 
-    if len(replace.items()) == 0:
+    if len(replace) == 0:
         return False
 
     old_ins = list(node.inputs)
@@ -540,7 +541,7 @@ def cond_merge_ifs_false(node):
                 replace[idx + 1 + op.n_outs] = \
                     ins_t[fval.owner.outputs.index(fval)]
 
-    if len(replace.items()) == 0:
+    if len(replace) == 0:
         return False
 
     old_ins = list(node.inputs)
@@ -618,7 +619,7 @@ def cond_remove_identical(node):
                         jdx not in out_map):
                     out_map[jdx] = idx
 
-    if len(out_map.keys()) == 0:
+    if len(out_map) == 0:
         return False
 
     nw_ts = []
