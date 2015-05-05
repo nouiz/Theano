@@ -106,7 +106,7 @@ def rand_gpuarray(*shape, **kwargs):
     dtype = kwargs.pop('dtype', theano.config.floatX)
     cls = kwargs.pop('cls', None)
     if len(kwargs) != 0:
-        raise TypeError('Unexpected argument %s', kwargs.keys()[0])
+        raise TypeError('Unexpected argument %s', list(kwargs.keys())[0])
     return gpuarray.array(r, dtype=dtype, cls=cls)
 
 

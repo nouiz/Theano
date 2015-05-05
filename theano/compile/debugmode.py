@@ -892,7 +892,7 @@ def _check_viewmap(node, storage_map):
         for key, val in iteritems(good_alias):
             bad_alias.pop(key, None)
         if bad_alias:
-            raise BadViewMap(node, oi, outstorage, bad_alias.values())
+            raise BadViewMap(node, oi, outstorage, list(bad_alias.values()))
 
         # if its not aliased to input, check output->output aliasing
         if not good_alias and _is_used_in_graph(onode):
@@ -1778,7 +1778,7 @@ class _Linker(gof.link.LocalLinker):
         # use new memory storage when it is needed, in particular for the
         # function's outputs. no_recycling_map will be used in f() below.
         if self.no_recycling is True:
-            no_recycling_map = storage_map.values()
+            no_recycling_map = list(storage_map.values())
             no_recycling_map = utils.difference(no_recycling_map,
                                                 input_storage)
         else:

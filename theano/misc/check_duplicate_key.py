@@ -75,12 +75,12 @@ if DISPLAY_MOST_FREQUENT_DUPLICATE_CCODE:
         print(kk)
 
 print("key.pkl histograph")
-l = nbs_keys.items()
+l = list(nbs_keys.items())
 l.sort()
 print(l)
 
 print("mod.{cpp,cu} histogram")
-l = nbs_mod.items()
+l = list(nbs_mod.items())
 l.sort()
 print(l)
 

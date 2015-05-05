@@ -1498,8 +1498,8 @@ class NavigatorOptimizer(Optimizer):
             return False
         old_vars = node.outputs
         if isinstance(replacements, dict):
-            old_vars = replacements.keys()
-            replacements = replacements.values()
+            old_vars = list(replacements.keys())
+            replacements = list(replacements.values())
         elif not isinstance(replacements, (tuple, list)):
             raise TypeError('Optimizer %s gave wrong type of replacement. '
                             'Expected list or tuple. Got %s' % (

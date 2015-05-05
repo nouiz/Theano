@@ -725,7 +725,7 @@ class PerformLinker(LocalLinker):
         if no_recycling is True:
             # True seems like some special code for *everything*?? -JB
             # FunctionMaker always passes a list I think   -JB
-            no_recycling = storage_map.values()
+            no_recycling = list(storage_map.values())
             no_recycling = utils.difference(no_recycling, input_storage)
         else:
             no_recycling = [storage_map[r] for r in no_recycling if r not in fgraph.inputs]

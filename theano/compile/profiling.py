@@ -1181,7 +1181,7 @@ class ProfileStats(object):
               " <created/inplace/view>"
               " <Apply node>", file=file)
         print("", file=file)
-        items = node_mem.items()
+        items = list(node_mem.items())
         items.sort(key=lambda a: a[1], reverse=True)
         for idx, (node, node_outputs_size) in enumerate(items[:N]):
             code = ['c'] * len(node.outputs)

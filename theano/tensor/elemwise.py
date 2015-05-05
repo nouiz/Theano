@@ -584,8 +584,8 @@ class Elemwise(OpenMPOp):
 
     def __eq__(self, other):
         if type(self) == type(other):
-            items = self.inplace_pattern.items()
-            other_items = other.inplace_pattern.items()
+            items = list(self.inplace_pattern.items())
+            other_items = list(other.inplace_pattern.items())
             items.sort()
             other_items.sort()
             rval = ((self.scalar_op == other.scalar_op)
@@ -605,7 +605,7 @@ class Elemwise(OpenMPOp):
     def __str__(self):
         if self.name is None:
             if self.inplace_pattern:
-                items = self.inplace_pattern.items()
+                items = list(self.inplace_pattern.items())
                 items.sort()
                 return "Elemwise{%s}%s" % (self.scalar_op, str(items))
             else:

@@ -362,7 +362,7 @@ def test_reallocation():
             from theano.tensor.var import TensorConstant
             for i in storage_map:
                 if not isinstance(i, TensorConstant):
-                    keys_copy = storage_map.keys()[:]
+                    keys_copy = list(storage_map.keys())[:]
                     keys_copy.remove(i)
                     for o in keys_copy:
                         if (storage_map[i][0] and

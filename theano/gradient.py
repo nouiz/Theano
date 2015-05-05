@@ -450,7 +450,7 @@ def grad(cost, wrt, consider_constant=None,
     if cost is not None:
         outputs.append(cost)
     if known_grads is not None:
-        outputs.extend(known_grads.keys())
+        outputs.extend(list(known_grads.keys()))
 
     var_to_app_to_idx = _populate_var_to_app_to_idx(
         outputs, wrt, consider_constant)

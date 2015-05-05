@@ -228,7 +228,7 @@ class GpuElemwise(GpuOp):
                 self.sync == other.sync)
 
     def _rehash(self):
-        items = self.inplace_pattern.items()
+        items = list(self.inplace_pattern.items())
         items.sort()
         tuple_items = [k for k, v in items]
         for k, v in items:
@@ -248,7 +248,7 @@ class GpuElemwise(GpuOp):
 
     def __str__(self):
         if self.inplace_pattern:
-            items = self.inplace_pattern.items()
+            items = list(self.inplace_pattern.items())
             items.sort()
             # We need to print the scalar_op, not only the its class name
             # to have the full definition of composite op.
