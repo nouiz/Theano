@@ -2295,7 +2295,7 @@ class _Maker(FunctionMaker):  # inheritance buys a few helper functions
                 optimizer(fgraph)
 
                 theano.compile.function_module.insert_deepcopy(
-                    fgraph, inputs, outputs + additional_outputs)
+                    fgraph, inputs, list(chain(outputs, additional_outputs)))
             finally:
                 theano.config.compute_test_value = compute_test_value_orig
 
