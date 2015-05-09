@@ -7,6 +7,7 @@ import logging
 _logger = logging.getLogger("theano.tensor.subtensor")
 
 import numpy
+from six.moves import xrange
 
 import theano
 from theano.compat import izip
