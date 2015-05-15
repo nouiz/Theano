@@ -262,7 +262,7 @@ class test_upgrade_to_float(object):
         (arctanh, [0])]
 
     binary_ops_vals = [
-        (arctan2, list(range(-127, 128), range(-127, 128)))]
+        (arctan2, list(range(-127, 128)), list(range(-127, 128)))]
 
     @staticmethod
     def _test_unary(unary_op, x_range):
