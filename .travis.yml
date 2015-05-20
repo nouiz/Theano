@@ -29,10 +29,9 @@ env:
   - PART="-e test_basic.py tensor/tests"
 
 matrix:
-  # Explicitly add one part to be run with Python 3, and a complete run in FAST_COMPILE
   include:
     - python: "3.3"
-      env: PART="tensor/tests/test_basic.py tensor/signal compile gof misc tests compat"
+      env: PART="." THEANO_FLAGS="mode=FAST_COMPILE"
     - python: "2.6"
       env: PART="." THEANO_FLAGS="mode=FAST_COMPILE"
 
