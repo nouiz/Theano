@@ -6,6 +6,8 @@ import numpy
 from nose.plugins.skip import SkipTest
 from nose.plugins.attrib import attr
 
+from six.moves import xrange
+
 import theano
 from theano.compat import imap
 from theano import gof, scalar, config
