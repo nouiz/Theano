@@ -934,7 +934,7 @@ TrueDivInplaceTester = makeBroadcastTester(
 _good_inv = dict(
     normal=[5 * rand_nonzero((2, 3))],
     integers=[randint_nonzero(2, 3)],
-    int8=[numpy.array(range(-127, 0) + range(1, 127), dtype='int8')],
+    int8=[numpy.array(list(range(-127, 0)) + list(range(1, 127)), dtype='int8')],
     complex=[randcomplex_nonzero((2, 3))],
     empty=[numpy.asarray([], dtype=config.floatX)])
 
