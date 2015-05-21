@@ -306,8 +306,8 @@ class test_upgrade_to_float(object):
     def test_true_div(self):
         # true_div's upcast policy is not exactly "upgrade_to_float",
         # so the test is a little bit different
-        x_range = range(-127, 128)
-        y_range = range(-127, 0) + range(1, 127)
+        x_range = list(range(-127, 128))
+        y_range = list(range(-127, 0)) + list(range(1, 127))
 
         xi = int8('xi')
         yi = int8('yi')
