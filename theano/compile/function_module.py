@@ -501,7 +501,7 @@ returned directly?"""
                 there.data = here.data
         return cpy
 
-    def copy(self, share_memory = False):
+    def copy(self, share_memory=False):
         """
         Copy this function. Copied function will have separated maker and fgraph
         with original function. User can choose whether to separate storage by 
@@ -551,13 +551,10 @@ returned directly?"""
                 else:
                     input_storage.append( copy.deepcopy[storage])
 
-<<<<<<< HEAD
             new_func = new_maker.create(input_storage, storage_map=new_storage_map)
 
             return new_func
 
-=======
->>>>>>> 87f2056... Delete extra line
     def __call__(self, *args, **kwargs):
         profile = self.profile
         t0 = time.time()
