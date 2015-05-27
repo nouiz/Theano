@@ -468,7 +468,11 @@ class Container(object):
         return r
 
 
+<<<<<<< HEAD
 def map_storage(fgraph, order, input_storage, output_storage, storage_map=None):
+=======
+def map_storage(fgraph, order, input_storage, output_storage, storage_map = None):
+>>>>>>> b28afe3... Modify link.map_storage() so that it make use of given storage_map
     """Ensure there is storage (a length-1 list) for inputs, outputs, and interior nodes.
 
     :param fgraph: The current fgraph.  This function uses the inputs and outputs attributes.
@@ -495,10 +499,9 @@ def map_storage(fgraph, order, input_storage, output_storage, storage_map=None):
         input_storage = [[None] for input in fgraph.inputs]
     else:
         assert len(fgraph.inputs) == len(input_storage)
-
+        
     if storage_map is None:
         storage_map = {}
-
     # add input storage into storage_map
     for r, storage in zip(fgraph.inputs, input_storage):
         storage_map[r] = storage
