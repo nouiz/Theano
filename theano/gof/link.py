@@ -497,7 +497,7 @@ def map_storage(fgraph, order, input_storage, output_storage, storage_map = None
         input_storage = [[None] for input in fgraph.inputs]
     else:
         assert len(fgraph.inputs) == len(input_storage)
-        
+
     if storage_map is None:
         storage_map = {}
 
@@ -683,7 +683,7 @@ class PerformLinker(LocalLinker):
         self.no_recycling = no_recycling
         return self
 
-    def make_all(self, input_storage=None, output_storage=None):
+    def make_all(self, input_storage=None, output_storage=None, storage_map=None):
         """
         :param input_storage: WRITEME
         :param output_storage: WRITEME
@@ -695,7 +695,7 @@ class PerformLinker(LocalLinker):
         order = self.schedule(fgraph)
         no_recycling = self.no_recycling
 
-        input_storage, output_storage, storage_map = map_storage(fgraph, order, input_storage, output_storage)
+        input_storage, output_storage, storage_map = map_storage(fgraph, order, input_storage, output_storage, storage_map)
 
         compute_map = {}
         for k in storage_map:
