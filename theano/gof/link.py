@@ -499,7 +499,7 @@ def map_storage(fgraph, order, input_storage, output_storage, storage_map = None
         input_storage = [[None] for input in fgraph.inputs]
     else:
         assert len(fgraph.inputs) == len(input_storage)
-        
+
     if storage_map is None:
         storage_map = {}
     # add input storage into storage_map
