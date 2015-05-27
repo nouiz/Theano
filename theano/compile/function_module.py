@@ -501,7 +501,7 @@ returned directly?"""
                 there.data = here.data
         return cpy
 
-    def copy(self, share_memory=False):
+    def copy(self, share_memory = False):
         """
         Copy this function. Copied function will have separated maker and fgraph
         with original function. User can choose whether to separate storage by 
