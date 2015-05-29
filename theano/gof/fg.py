@@ -247,6 +247,17 @@ class FunctionGraph(utils.object2):
 
     ### import ###
     def __import_r__(self, variables, reason):
+        """
+        Import variables to this FunctionGraph and also their apply_node,
+        if those nodes are not in this graph.
+        ----------------------
+        Parameters;
+            variables -- Iterable if variables needed to import
+            reason -- String. Reason.
+        ----------------------
+        Returns:
+            None
+        """
         global NullType
         if NullType is None:
             from null_type import NullType
@@ -265,6 +276,10 @@ class FunctionGraph(utils.object2):
             self.variables.add(r)
 
     def __import__(self, apply_node, check=True, reason=None):
+        """
+        Given an apply_node, recursively search from this node to know graph,
+        and then add all unknown variables and apply_nodes to this graph.
+        """
         node = apply_node
 
         # We import the nodes in topological order. We only are interested
