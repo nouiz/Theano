@@ -1694,7 +1694,7 @@ class _Linker(gof.link.LocalLinker):
         return self
 
     def make_all(self, profiler=None, input_storage=None,
-                 output_storage=None):
+                 output_storage=None, storage_map=None):
         # can't import at toplevel because of circular import TODO:
         # don't do this ugly hacky way of setting the
         # filter_checks_isfinite
@@ -1724,7 +1724,7 @@ class _Linker(gof.link.LocalLinker):
         no_recycling = []
 
         input_storage, output_storage, storage_map = link.map_storage(
-            fgraph, order, input_storage_, output_storage_)
+            fgraph, order, input_storage_, output_storage_, storage_map)
 
         thunks_py = []  # python thunks
         thunks_c = []  # c thunks
