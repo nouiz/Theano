@@ -127,14 +127,23 @@ def traverse(out, x, x_copy, d, visited=None):
     if out in visited:
         return d
     visited.add(out)
-    import theano.sandbox.cuda as cuda
+    from theano.sandbox import cuda, gpuarray
     if out == x:
-        d[out] = cuda.gpu_from_host(x_copy)
+        if isinstance(x.type, cuda.CudaNdarrayType):
+            d[out] = cuda.gpu_from_host(x_copy)
+        else:
+            assert isinstance(x.type, gpuarray.GpuArrayType)
+            d[out] = gpuarray.gpu_from_host(x_copy)
         return d
     elif out.owner is None:
         return d
     elif (cuda.cuda_available and
           out.owner.op == cuda.host_from_gpu and
+          out.owner.inputs == [x]):
+        d[out] = tensor.as_tensor_variable(x_copy)
+        return d
+    elif (gpuarray.pygpu_activated and
+          out.owner.op == gpuarray.host_from_gpu and
           out.owner.inputs == [x]):
         d[out] = tensor.as_tensor_variable(x_copy)
         return d
@@ -420,6 +429,7 @@ def equal_computations(xs, ys, in_xs=None, in_ys=None):
             return False
 
     common = set(zip(in_xs, in_ys))
+    different = set()
     for dx, dy in izip(xs, ys):
         # We checked above that both dx and dy have an owner or not
         if not dx.owner:
@@ -434,7 +444,7 @@ def equal_computations(xs, ys, in_xs=None, in_ys=None):
 
     # Explore the two graphs, in parallel, depth first, comparing the nodes
     # along the way for equality.
-    def compare_nodes(nd_x, nd_y):
+    def compare_nodes(nd_x, nd_y, common, different):
         ''' Compare two nodes to determine if they perform equal computation.
         This is done by comparing the ops, the number of inputs, outputs and
         by ensuring that the inputs themselves are the result of equal
@@ -451,6 +461,16 @@ def equal_computations(xs, ys, in_xs=None, in_ys=None):
         elif len(nd_x.outputs) != len(nd_y.outputs):
             return False
         else:
+            all_in_common=True
+            for dx, dy in izip(nd_x.outputs, nd_y.outputs):
+                if (dx, dy) in different:
+                    return False
+                if (dx, dy) not in common:
+                    all_in_common = False
+
+            if all_in_common:
+                return True
+
             # Compare the individual inputs for equality
             for dx, dy in izip(nd_x.inputs, nd_y.inputs):
                 if (dx, dy) not in common:
@@ -461,8 +481,9 @@ def equal_computations(xs, ys, in_xs=None, in_ys=None):
                         dx.owner.outputs.index(dx) ==
                         dy.owner.outputs.index(dy)):
 
-                        nodes_equal = compare_nodes(dx.owner, dy.owner)
+                        nodes_equal = compare_nodes(dx.owner, dy.owner, common, different)
                         if not nodes_equal:
+                            different.add((dx, dy))
                             return False
 
                     # If both variables don't have an owner, then they are
@@ -493,7 +514,7 @@ def equal_computations(xs, ys, in_xs=None, in_ys=None):
         if xs[i].owner:
             # The case where pairs of x[i]s and y[i]s don't both have an owner
             # have already been adressed.
-            is_equal = compare_nodes(xs[i].owner, ys[i].owner)
+            is_equal = compare_nodes(xs[i].owner, ys[i].owner, common, different)
             if not is_equal:
                 return False
 

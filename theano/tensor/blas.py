@@ -417,7 +417,8 @@ class Gemv(Op):
 
     def perform(self, node, inputs, out_storage):
         y, alpha, A, x, beta = inputs
-        if have_fblas and y.shape[0] != 0 and x.shape[0] != 0:
+        if (have_fblas and y.shape[0] != 0 and x.shape[0] != 0 and
+                y.dtype in _blas_gemv_fns):
             gemv = _blas_gemv_fns[y.dtype]
 
             if (A.shape[0] != y.shape[0] or A.shape[1] != x.shape[0]):
@@ -1727,7 +1728,7 @@ def local_dot_to_dot22(node):
                      x, y, x.type, y.type)
         return
 
-    if y.type.dtype.startswith('float') or y.type.dtype.startswith('complex'):
+    if y.type.dtype in ['float32', 'float64', 'complex64', 'complex128']:
         if x.ndim == 2 and y.ndim == 2:
             # print "local_dot_to_dot22: MM"
             return [_dot22(*node.inputs)]
@@ -1823,7 +1824,6 @@ def local_dot22_to_ger_or_gemv(node):
             # x and y are both vectors so this might qualifies for a GER
             xv = x.dimshuffle(0)
             yv = y.dimshuffle(1)
-
             zeros = T.zeros([x.shape[0], y.shape[1]], dtype=x.dtype)
             rval = ger(zeros, one, xv, yv)
             return [rval]
@@ -1831,19 +1831,19 @@ def local_dot22_to_ger_or_gemv(node):
             # x and y are both vectors so this qualifies for a sdot / ddot
             # TODO: Theano doesn't have a sdot, but gemv is better than _dot22
             xv = x.dimshuffle(1)
-            zeros = T.zeros([1], x.dtype)
+            zeros = T.AllocEmpty(x.dtype)(1)
             rval = gemv_no_inplace(zeros, one, y.T, xv, zero)
             return [rval.dimshuffle('x', 0)]
         if xb[0] and not yb[0] and not yb[1]:
             # x is vector, y is matrix so try gemv
             xv = x.dimshuffle(1)
-            zeros = T.zeros([y.shape[1]], x.dtype)
+            zeros = T.AllocEmpty(x.dtype)(y.shape[1])
             rval = gemv_no_inplace(zeros, one, y.T, xv, zero)
             return [rval.dimshuffle('x', 0)]
         if not xb[0] and not xb[1] and yb[1]:
             # x is matrix, y is vector, try gemv
             yv = y.dimshuffle(0)
-            zeros = T.zeros([x.shape[0]], dtype=x.dtype)
+            zeros = T.AllocEmpty(x.dtype)(x.shape[0])
             rval = gemv_no_inplace(zeros, one, x, yv, zero)
             return [rval.dimshuffle(0, 'x')]
 
@@ -1874,7 +1874,8 @@ blas_optdb.register('local_gemm_to_gemv',
             local_gemm_to_ger,
             local_dot22_to_ger_or_gemv,
             local_dimshuffle_lift],
-            max_use_ratio=5),
+            max_use_ratio=5,
+            ignore_newtrees=False),
         15, 'fast_run')
 
 
@@ -1983,6 +1984,13 @@ _dot22scalar = Dot22Scalar()
 @local_optimizer([T.mul])
 def local_dot22_to_dot22scalar(node):
     """
+    :note: Previous attempts to alter this optimization to replace dot22 with
+        gemm instead of dot22scalar resulted in some Scan nodes being
+        duplicated and the ScanSaveMem optimization never running on them,
+        resulting in highly increased memory usage. Until this issue is
+        resolved, this optimization should keep using dot22scalar instead of
+        gemm.
+
     :note: we upcast the scalar if after the multiplication with the
         dot this give the same type.
 
@@ -2082,6 +2090,7 @@ def local_dot22_to_dot22scalar(node):
     else:
         return [T.mul(_dot22scalar(d.owner.inputs[0],
                                    d.owner.inputs[1], a), *o)]
+
 
 # must happen after gemm as the gemm optimizer don't understant
 # dot22scalar and gemm give more speed up then dot22scalar

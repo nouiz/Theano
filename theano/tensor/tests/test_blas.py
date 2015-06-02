@@ -878,8 +878,10 @@ def test_dot22scalar():
                     def check_dot22scalar(func, len_topo_scalar=-1):
                         topo = func.maker.fgraph.toposort()
                         ops = [x.op for x in topo]
+                        classes = [type(x.op) for x in topo]
                         dtype4_upcast = theano.scalar.upcast(dtype4, dtype1,
                                                              dtype2)
+
                         if dtype1 == dtype2 == dtype3 == dtype4_upcast:
                             if len_topo_scalar > 0:
                                 assert len(topo) == len_topo_scalar

@@ -304,7 +304,9 @@ def test_careduce():
 
 def test_flatten():
     x = cuda.fmatrix('x')
-    f = theano.function([x], x.flatten())
+    f = theano.function([x], x.flatten(), mode=mode_with_gpu)
+    assert any([node for node in f.maker.fgraph.toposort()
+                if isinstance(node.op, B.GpuFlatten)])
     assert len(f([[0., 0.], [0., 0.]]).shape) == 1
 
 
@@ -380,7 +382,7 @@ def test_alloc_empty():
     assert out.shape == (2, 3)
     assert out.dtype == 'float32'
 
-    # Test that we do not merge them.
+    # Test that we merge them.
     f = theano.function([], [cuda.basic_ops.gpu_alloc_empty(2, 3),
                              cuda.basic_ops.gpu_alloc_empty(2, 3)])
     out = f()

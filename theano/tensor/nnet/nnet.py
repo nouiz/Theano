@@ -16,7 +16,7 @@ import theano
 from theano import gof
 from theano.tensor import basic as tensor
 from theano.tensor import subtensor
-from theano.tensor import elemwise, dmatrix, fmatrix, dvector, fvector
+from theano.tensor import elemwise
 from theano.tensor import opt
 from theano.compile import optdb
 from theano.gof import Apply
@@ -398,7 +398,7 @@ class Softmax(gof.Op):
         x = tensor.as_tensor_variable(x)
         if x.type.ndim not in (1, 2) \
                 or x.type.dtype not in tensor.float_dtypes:
-            raise ValueError('x must be 1-d or 2-d tensor of floats. Got ',
+            raise ValueError('x must be 1-d or 2-d tensor of floats. Got %s' %
                              x.type)
         if x.ndim == 1:
             x = tensor.shape_padleft(x, n_ones=1)
@@ -1426,9 +1426,11 @@ optdb.register('crossentropy_to_crossentropy_with_softmax',
                'fast_run', 'xent', 'fast_compile_gpu')
 
 
-@opt.register_specialize('fast_compile_gpu')
+@opt.register_specialize(
+    'fast_compile_gpu',
+    'local_crossentropy_to_crossentropy_with_softmax_grad')  # old name
 @gof.local_optimizer([softmax_grad])
-def local_crossentropy_to_crossentropy_with_softmax_grad(node):
+def local_softmax_grad_to_crossentropy_with_softmax_grad(node):
     if node.op == softmax_grad:
         g_coding_dist, coding_dist = node.inputs
         if (g_coding_dist.owner and
@@ -1746,7 +1748,7 @@ def local_advanced_indexing_crossentropy_onehot_grad(node):
             # Check z is zeros_like(log(sm))
             if not _is_const(z, 0):
                 return
-            if z.type not in (dmatrix, fmatrix):
+            if z.broadcastable != (False, False):
                 if not (vector_softmax and z.broadcastable == (True, False)):
                     return
             # here we know that we are incrementing a matrix of zeros
@@ -1758,14 +1760,15 @@ def local_advanced_indexing_crossentropy_onehot_grad(node):
             if incr.ndim != 1 or incr.dtype not in tensor.float_dtypes:
                 return
 
-            # here we know that we are incrementing some part of matrix z by a vector
+            # here we know that we are incrementing some part of
+            # matrix z by a vector
 
-            # unless the user has taken care to mark that the data and labels have the
-            # same number of rows, we cannot be sure here that
-            # len(y) == len(z)
-            # However, in the common case that these are predictions and labels it is true.
-            # We leave it to the Op to crash (and the user to complain) if this assumption is
-            # ever not true.
+            # unless the user has taken care to mark that the data and
+            # labels have the same number of rows, we cannot be sure
+            # here that len(y) == len(z) However, in the common case
+            # that these are predictions and labels it is true.  We
+            # leave it to the Op to crash (and the user to complain)
+            # if this assumption is ever not true.
 
             out_grad = -incr
 

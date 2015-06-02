@@ -34,6 +34,13 @@ _logger = logging.getLogger(_logger_name)
 
 
 def as_cuda_ndarray_variable(x):
+    if x.owner:
+        if isinstance(x.owner.op, HostFromGpu):
+            return x.owner.inputs[0]
+        elif (isinstance(x.owner.op, GpuFromHost) and
+              x.owner.inputs[0].owner and
+              isinstance(x.owner.inputs[0].owner.op, HostFromGpu)):
+            return x.owner.inputs[0].owner.inputs[0]
     if hasattr(x, '_as_CudaNdarrayVariable'):
         return x._as_CudaNdarrayVariable()
     tensor_x = tensor.as_tensor_variable(x)
@@ -1557,15 +1564,65 @@ class GpuCAReduce(GpuOp):
         print("""
         {
             int verbose = 0;
-            dim3 n_threads(
-                    std::min(CudaNdarray_HOST_DIMS(%(x)s)[0],
-                            NUM_VECTOR_OP_THREADS_PER_BLOCK));
-            dim3 n_blocks(std::min(CudaNdarray_HOST_DIMS(%(x)s)[1], NUM_VECTOR_OP_BLOCKS));
-            while (n_blocks.x * (n_blocks.y+1) <= NUM_VECTOR_OP_BLOCKS && n_blocks.y <= CudaNdarray_HOST_DIMS(%(x)s)[2])
-            {
-                n_blocks.y += 1;
+            if (CudaNdarray_HOST_STRIDES(%(x)s)[2] != 1){
+                dim3 n_threads(
+                        std::min(CudaNdarray_HOST_DIMS(%(x)s)[0],
+                                NUM_VECTOR_OP_THREADS_PER_BLOCK));
+                dim3 n_blocks(std::min(CudaNdarray_HOST_DIMS(%(x)s)[1],
+                              NUM_VECTOR_OP_BLOCKS));
+                while (n_blocks.x * (n_blocks.y+1) <= NUM_VECTOR_OP_BLOCKS &&
+                       n_blocks.y <= CudaNdarray_HOST_DIMS(%(x)s)[2])
+                {
+                    n_blocks.y += 1;
+                }
+                %(makecall)s
             }
-            %(makecall)s
+            else
+            {   // reuse 010_AD kernel, we transpose the 2 first dim
+                // See the reduction for the real 010_AD kernel for
+                // explanation. We do this to get coalesced read.
+                dim3 n_threads(32,1,1);
+
+                int A = CudaNdarray_HOST_DIMS(%(x)s)[1];
+                int B = CudaNdarray_HOST_DIMS(%(x)s)[0];
+                int C = CudaNdarray_HOST_DIMS(%(x)s)[2];
+                int D = C/32;
+                if (32*D < C) D+= 1;
+                assert ((C <= 32*D) && (32*D < C+32));
+
+                dim3 n_blocks(A,D);
+                if (n_blocks.x > NUM_VECTOR_OP_BLOCKS)
+                    n_blocks.x = NUM_VECTOR_OP_BLOCKS;
+                if (n_blocks.x*n_blocks.y > NUM_VECTOR_OP_BLOCKS)
+                    n_blocks.y = NUM_VECTOR_OP_BLOCKS/n_blocks.x;
+                int n_shared = 0;
+                kernel_reduce_010_AD_%(name)s<<<n_blocks, n_threads, n_shared>>>(
+                A,B,C,D,
+                        CudaNdarray_DEV_DATA(%(x)s),
+                        CudaNdarray_HOST_STRIDES(%(x)s)[1],
+                        CudaNdarray_HOST_STRIDES(%(x)s)[0],
+                        CudaNdarray_HOST_STRIDES(%(x)s)[2],
+                        CudaNdarray_DEV_DATA(%(z)s),
+                        CudaNdarray_HOST_STRIDES(%(z)s)[0],
+                        CudaNdarray_HOST_STRIDES(%(z)s)[1]
+                        );
+                CNDA_THREAD_SYNC;
+                cudaError_t sts = cudaGetLastError();
+                if (cudaSuccess != sts)
+                {
+                    PyErr_Format(PyExc_RuntimeError,
+                        "Cuda error: %%s: %%s."
+                        " (grid: %%i x %%i; block: %%i x %%i x %%i)\\n",
+                        "kernel_reduce_010_%(name)s",
+                        cudaGetErrorString(sts),
+                        n_blocks.x,
+                        n_blocks.y,
+                        n_threads.x,
+                        n_threads.y,
+                        n_threads.z);
+                    %(fail)s;
+                }
+            }
         }
         """ % locals(), file=sio)
 
@@ -1736,7 +1793,7 @@ class GpuCAReduce(GpuOp):
         """ % locals(), file=sio)
 
     def c_code_cache_version_apply(self, node):
-        version = [12]  # the version corresponding to the c code in this Op
+        version = [13]  # the version corresponding to the c code in this Op
 
         # now we insert versions for the ops on which we depend...
         scalar_node = Apply(self.scalar_op,
@@ -1970,7 +2027,7 @@ class GpuCAReduce(GpuOp):
 
             }
             """ % locals(), file=sio)
-        if self.reduce_mask == (0, 1, 0) or self.reduce_mask == (1, 0):
+        if self.reduce_mask in [(0, 1, 0), (1, 0), (1, 0, 0)]:
             reduce_fct = self._assign_reduce(node, nodename, "myresult",
                                              "X[a * sX0 + b * sX1 + c * sX2]",
                                              {}, True)
@@ -2506,6 +2563,10 @@ class GpuAdvancedSubtensor1(tensor.AdvancedSubtensor1, GpuOp):
         if x_.type.ndim == 0:
             raise TypeError('cannot index into a scalar')
 
+        # c code suppose it is int64
+        if x.ndim in [2, 3] and ilist_.dtype in [
+            'int8', 'int16', 'int32', 'uint8', 'uint16', 'uint32']:
+            ilist_ = ilist_.cast('int64')
         bcast = (ilist_.broadcastable[0],) + x_.broadcastable[1:]
         return Apply(self, [x_, ilist_],
                      [CudaNdarrayType(dtype=x.dtype,
@@ -2563,6 +2624,38 @@ class GpuAdvancedSubtensor1(tensor.AdvancedSubtensor1, GpuOp):
             for (j, i) in enumerate(idx):
                 o[j] = x[i]
             out[0] = o
+
+    def c_code(self, node, name, inputs, outputs, sub):
+        x, idx = inputs
+        out, = outputs
+        fail = sub['fail']
+        if node.inputs[0].ndim not in [2, 3]:
+            raise NotImplementedError("This case does not have C code yet.")
+        if node.inputs[1].dtype != 'int64':
+            raise Exception("Index should have dtype int64. Check this node make_node().")
+        return """
+        //take(idx, 0, out, "raise", max_threads);
+        PyObject * ret = NULL;
+        PyObject * args = Py_BuildValue("OiOsi", %(idx)s, 0,
+                                        %(out)s == NULL ? Py_None : (PyObject *)%(out)s,
+                                        "raise", 512);
+        if(args == NULL){
+            //Error set by Py_BuildValue
+            %(fail)s;
+        }
+        ret = CudaNdarray_TakeFrom(%(x)s, args);
+
+        Py_DECREF(args);
+        if (ret == NULL){
+            %(fail)s;
+        }
+        // Even if we decref, we still try to reuse preallocated output
+        Py_XDECREF(%(out)s);
+        %(out)s = (CudaNdarray *) ret;
+        """ % locals()
+
+    def c_code_cache_version(self):
+        return (2,)
 
 
 class GpuAdvancedIncSubtensor1(tensor.AdvancedIncSubtensor1, GpuOp):
@@ -3070,7 +3163,7 @@ class GpuJoin(tensor.Join, GpuOp):
         axis, cndas = axis_and_tensors[0], axis_and_tensors[1:]
         # In case axis is numpy.int8 and has no __index__() method
         axis = int(axis)
-        ndim = tensors[0].ndim
+        ndim = cndas[0].ndim
         if axis < -ndim:
             raise IndexError("Join axis %d out of bounds [0, %d)" %
                              (axis, ndim))
