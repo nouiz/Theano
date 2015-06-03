@@ -536,9 +536,15 @@ returned directly?"""
             # so that the ensuing function shares storage with the original one
             new_storage_map = {}
             storage_map = self.fn.storage_map
+            
+            # TODO: We could share the output storage, but we must make sure 
+            # 2 different function call won't override each other values. This 
+            # is already done elsewhere, so to reuse it the user would need to 
+            # use Out(var, borrow=True) and maybe the mutable=True flag too. 
+            # But to be safe for now as it isn't documented and we aren't sure 
+            # it is well tested, we don't share the part of the storage_map.
             for key in storage_map.keys():
-                # output_storages should not be shared
-                if key not in self.maker.fgraph.outputs and memo.has_key(key):
+                if key not in self.maker.fgraph.outputs:
                     new_storage_map[memo[key]] = storage_map[key]
 
             # copy input storages if it's mutable
@@ -1441,7 +1447,7 @@ class FunctionMaker(object):
         limit_orig = theano.config.traceback.limit
         try:
             theano.config.traceback.limit = 0
-            _fn, _i, _o = self.linker.make_thunk(
+            _fn, _i, _o = self.linker.make_thunk( 
                 input_storage=input_storage_lists, storage_map=storage_map)
         finally:
             theano.config.traceback.limit = limit_orig
