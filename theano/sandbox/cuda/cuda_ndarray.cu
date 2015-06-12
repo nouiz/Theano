@@ -2,6 +2,7 @@
 
 #include <Python.h>
 #include <structmember.h>
+#include "theano_mod_helper.h"
 
 #include <numpy/arrayobject.h>
 #include <iostream>
@@ -1030,7 +1031,6 @@ CudaNdarray_TakeFrom(CudaNdarray * self, PyObject *args){
         PyObject * indices_float32 = NULL;
         indices_float32 = PyArray_View((PyArrayObject*)indices_obj,
                                                   float32_descr, NULL);
-        Py_DECREF(float32_descr);
         if (verbose) printf("ndarray indices\n");
         if (!indices_float32)
             return NULL;
@@ -1065,7 +1065,7 @@ CudaNdarray_TakeFrom(CudaNdarray * self, PyObject *args){
     if(!CudaNdarray_is_c_contiguous(indices) != 0) {
         PyErr_SetString(PyExc_NotImplementedError,
                         "CudaNdarray_TakeFrom: The indices must be contiguous in memory.");
-        Py_DECREF(indices_obj);
+        Py_DECREF(indices);
         return NULL;
     }
     int nb_indices = CudaNdarray_SIZE((CudaNdarray *)indices) / 2;// int64 are 8 bytes, float32 are 4 bytes
@@ -3466,10 +3466,6 @@ static PyMethodDef module_methods[] = {
      "Used to know if this version of cuda_ndarray is linked with cublas v2."},
     {NULL, NULL, NULL, NULL}  /* Sentinel */
 };
-
-#ifndef PyMODINIT_FUNC  /* declarations for DLL import/export */
-#define PyMODINIT_FUNC void
-#endif
 
 #define CNDA_MOD_NAME "cuda_ndarray"
 #define CNDA_DOCSTRING "CUDA implementation of a numpy ndarray-like object."

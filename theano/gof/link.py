@@ -144,8 +144,11 @@ def raise_with_op(node, thunk=None, exc_info=None, storage_map=None):
         clients = [[c[0] for c in var.clients] for var in node.outputs]
         detailed_err_msg += ("Inputs shapes: %s" % shapes +
                              "\nInputs strides: %s" % strides +
-                             "\nInputs values: %s" % scalar_values +
-                             "\nOutputs clients: %s\n" % clients)
+                             "\nInputs values: %s" % scalar_values)
+        if hasattr(node.op, '__input_name__'):
+            detailed_err_msg += "\nInputs name: %s\n" % str(node.op.__input_name__)
+
+        detailed_err_msg += "\nOutputs clients: %s\n" % clients
     else:
         hints.append(
             "HINT: Use another linker then the c linker to"
@@ -624,6 +627,12 @@ def gc_helper(node_list):
     dictionary that maps each Variable instance to a the last node to use Variable as an input.
 
     This is used to allow garbage collection within graphs.
+
+    It ignore view_map and destroy_map. This isn't needed as python
+    have referecence count. In Theano gc, we should not take into
+    account view_map and destroy_map as if the thunk decided to create
+    a new output, we would delay uselessly its gc by Python.
+
     """
     # for freeing memory
     last_user = {}
