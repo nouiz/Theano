@@ -533,7 +533,7 @@ returned directly?"""
                 "Type of original SharedVariable:", sv_ori.type)
 
         maker = self.maker
-        
+
         # Copy Ins and their storage.
         # so that they have different storage as their value
         ins = [copy.copy(input) for input in maker.inputs]
@@ -582,13 +582,13 @@ returned directly?"""
             # Swap SharedVairable in fgraph and ins
             for index, (i, in_v) in enumerate(zip(ins, fg_cpy.inputs)):
                 # Variables in maker.ipnuts are defined by user, therefore we
-                # use them to make comparision and do the mapping. 
+                # use them to make comparision and do the mapping.
                 # Otherwise we don't touch them.
                 swap_sv = maker.inputs[index].variable
 
                 if swap_sv in swap_svs_ori:
                     checkSV(i.variable, swap_sv)
-                    
+
                     # In the fgraph we use the cloned SharedVariable
                     swap_sv = swap_sv.clone()
 
@@ -629,7 +629,7 @@ returned directly?"""
         for in_ori, in_cpy, ori, cpy in zip(maker.inputs, f_cpy.maker.inputs,
                                             self.input_storage,
                                             f_cpy.input_storage):
-            
+
             # Share immutable ShareVariable and constant input's storage
             swapped = swap is not None and in_ori.variable in swap_svs_ori
 
@@ -1341,7 +1341,6 @@ class FunctionMaker(object):
             need_opt = False
             updates = [spec.update for spec in inputs if spec.update]
             additional_outputs = map(SymbolicOutput, updates)
-            pass
 
         self.fgraph = fgraph
 
