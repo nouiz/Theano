@@ -542,8 +542,10 @@ returned directly?"""
         # Copy Ins and their storage.
         # so that they have different storage as their value
         ins = [copy.copy(input) for input in maker.inputs]
-        for in_cpy, in_ori in zip(ins, maker.inputs):
-            in_cpy.value = copy.deepcopy(in_ori.value)
+        # TODO: why the next two lines are needed?
+        #       Commenting them fix bug in DLT logistic_sgd when using copy.
+#        for in_cpy, in_ori in zip(ins, maker.inputs):
+#            in_cpy.value = copy.deepcopy(in_ori.value)
 
         # Delete update output in fgraph and updates In instances if needed
         if delete_updates:
