@@ -799,15 +799,14 @@ def test_fusion_outputs():
     # Trigger remove of common inputs.
     outs = [a + 1, theano.tensor.tanh(b), (a + 1) * numpy.float32(1.3),
             (a+1)+a]  # need merge with inputs
-#    outs = [a + b, (a+b)+(a+c)]
     f = pfunc([], outs, mode=mode_with_gpu)
     theano.printing.debugprint(f)
-#    assert len([n for n in f.maker.fgraph.apply_nodes
-#                if isinstance(n.op, cuda.GpuElemwise)]) == 2
+    # TODO: currently we don't merge sibling elemwise
+    #       when done, there will be only 2 elemwises
+    assert len([n for n in f.maker.fgraph.apply_nodes
+                if isinstance(n.op, cuda.GpuElemwise)]) == 3
     # TODO add missing assert for common inputs
     f()
-    #import pdb;pdb.set_trace()
-    pass
 
     # Don't merge when only shared are scalar constant inputs.
     outs = [a + 1, b + 1]
@@ -816,19 +815,29 @@ def test_fusion_outputs():
     assert len([n for n in f.maker.fgraph.apply_nodes
                 if isinstance(n.op, cuda.GpuElemwise)]) == 2
     f()
-    #import pdb;pdb.set_trace()
-    pass
-    return
+    outs = [a + 1, a + 2]
+    f = pfunc([], outs, mode=mode_with_gpu)
+    theano.printing.debugprint(f)
+    assert len([n for n in f.maker.fgraph.apply_nodes
+                # TODO: Currently we don't merge sibling elemwise
+                if isinstance(n.op, cuda.GpuElemwise)]) == 2
+    f()
+
     # Merge when only shared are non-scalar constant inputs.
     cst = numpy.arange(6, dtype='float32').reshape(3, 2)
     outs = [a + cst, b + cst]
     f = pfunc([], outs, mode=mode_with_gpu)
-    assert len([n for n in f.maker.fgraph.apply_nodes
-                if isinstance(n.op, cuda.GpuElemwise)]) == 1
-    f()
     theano.printing.debugprint(f)
-    import pdb;pdb.set_trace()
-    pass
+    assert len([n for n in f.maker.fgraph.apply_nodes
+                if isinstance(n.op, cuda.GpuElemwise)]) == 2
+    f()
+    cst = numpy.arange(6, dtype='float32').reshape(3, 2)
+    outs = [a + cst, a + cst * 2]
+    f = pfunc([], outs, mode=mode_with_gpu)
+    theano.printing.debugprint(f)
+    assert len([n for n in f.maker.fgraph.apply_nodes
+                if isinstance(n.op, cuda.GpuElemwise)]) == 2
+    f()
 
 
 class test_diag(theano.tensor.tests.test_nlinalg.test_diag):

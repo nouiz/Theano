@@ -336,6 +336,7 @@ def local_gpu_elemwise_fusion_outputs(node):
     :note: There is an optimization that fuse consecutive elemwise
         that we support is applied before.
 
+    TODO: merge signibling node. See test_opt.py:test_fusion_outputs
     """
     if not isinstance(node.op, GpuElemwise):
         return
@@ -393,27 +394,32 @@ def local_gpu_elemwise_fusion_outputs(node):
             new_out = node.outputs + candidate.outputs
             assert len(new_out) == len(e)
             ret = OrderedDict(zip(new_out, e))
-            for k, v in ret.items():
-                if k.type != v.type:
-                    import pdb;pdb.set_trace()
-            print(node)
-            print(candidate)
-            print(new_in)
-            import pdb;pdb.set_trace()
+#            for k, v in ret.items():
+#                if k.type != v.type:
+#                    import pdb;pdb.set_trace()
+            # TODO: why this condition?
             if len (new_out) > 4 or len(new_in) > 16:
                 return
             assert len(new_out) == len(e)
             return OrderedDict(zip(new_out, e))
 
-# Currently, the normal fusion opt do not handle elemwise with multiple outputs.
-# Should be after gpu_elemwise_fusion(49)
-# We register it after, as this opt could raise memory usage, but not the previous one.
-if False:
-    theano.compile.optdb.register(
-        'local_gpu_elemwise_fusion_outputs',
-        theano.tensor.opt.in2out(local_gpu_elemwise_fusion_outputs), 49.1,
-        'fusion',
-        'fast_run', 'inplace', 'gpu')
+# Currently, the normal fusion opt do not handle elemwise with
+# multiple outputs.  So we should register it after
+# gpu_elemwise_fusion(49).  Also, multiple output could raise the
+# memory usage, so safer to register later.
+fusion_multiple_outputs = EquilibriumDB(ignore_newtrees=False)
+fusion_multiple_outputs.register(
+    'local_gpu_elemwise_fusion_outputs',
+    local_gpu_elemwise_fusion_outputs,
+    'fusion', 'inplace',
+    'fast_run', 'gpu')
+
+theano.compile.optdb.register(
+    'fusion_multiple_outputs',
+    fusion_multiple_outputs, 49.1,
+    'fusion', 'inplace',
+    'fast_run',
+    'gpu')
 
 
 @register_opt()
