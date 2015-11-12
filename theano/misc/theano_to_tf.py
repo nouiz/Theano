@@ -1,7 +1,8 @@
 # Functions for pretty-printing Theano nodes for debugging
 import collections
+import logging
 
-from tensorflow import GraphDef, NodeDef
+from tensorflow import GraphDef, NodeDef, Session
 
 import theano
 
@@ -54,8 +55,8 @@ def _MakeNode(name, op, inputs=None, signature=None):
     result.op = op
     if inputs is not None:
         result.input.extend(inputs)
-    if signature is not None:
-        result.signature = signature
+#    if signature is not None:
+#        result.signature = signature
     return result
 
 
@@ -94,13 +95,12 @@ class TensorFlowTheanoFunction(object):
         self._inputs = inputs
         self._outputs = [output + ":0" for output in outputs]
         self._graph_def = graph_def
-        logging.vlog(1, "Making TensorFlow client with graphdef " +
+        logging.info("Making TensorFlow client with graphdef " +
                      str(graph_def))
-        logging.vlog(1, "inputs are " + str(self._inputs))
-        logging.vlog(1, "outputs are " + str(self._outputs))
+        logging.info("inputs are " + str(self._inputs))
+        logging.info("outputs are " + str(self._outputs))
 
-        self._session = session.Session("local")
-        self._session.Create(graph_def)
+        self._session = Session(graph=graph_def)
 
     def __call__(self, *args, **kwargs):
         feeds = {}
@@ -278,7 +278,7 @@ class TheanoConverter(object):
                                    theano_op_name +
                                    " - " + str(node.owner.op.__class__))
 
-            logging.vlog(1, "Converted " + _ReadableNodeName(node) + " to " +
+            logging.info("Converted " + _ReadableNodeName(node) + " to " +
                          ",".join([str(op) for op in new_tensor_flow_nodes]))
 
             # perhaps do the above automatically like this
