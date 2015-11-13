@@ -2,6 +2,7 @@
 import collections
 import logging
 
+import tensorflow as tf
 from tensorflow import GraphDef, NodeDef, Session
 
 import theano
@@ -99,8 +100,8 @@ class TensorFlowTheanoFunction(object):
                      str(graph_def))
         logging.info("inputs are " + str(self._inputs))
         logging.info("outputs are " + str(self._outputs))
-
-        self._session = Session(graph=graph_def)
+        graph = tf.import_graph_def(graph_def)
+        self._session = Session(graph=graph)
 
     def __call__(self, *args, **kwargs):
         feeds = {}
@@ -340,7 +341,7 @@ class TheanoConverter(object):
         node_name = self.node_name_map[id(node)]
 
         if type(node).__name__ == "TensorVariable":
-            return [_MakeNode(node_name, "params", None, "->float,float_ref")]
+            return [_MakeNode(node_name, "Placeholder", None, "->float,float_ref")]
         elif type(node).__name__ == "TensorConstant":
             tf_node = _MakeNode(node_name, "const", None, "->float")
             tf_tensor = tf_node.Extensions[
