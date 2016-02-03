@@ -351,6 +351,9 @@ public:
     inline cnmemStatus_t getFreeMemoryUnsafe(std::size_t &freeMemory) const { 
         return getMemoryUnsafe(freeMemory, mFreeBlocks); 
     }
+    inline cnmemStatus_t getMaxFreeMemoryUnsafe(std::size_t &maxMemory) const {
+        return getMaxMemoryUnsafe(maxMemory, mFreeBlocks);
+    }
     
     /// Get a specific child based on the stream id. 
     cnmemStatus_t getChildFromStream(Manager *&manager, cudaStream_t stream) const;
@@ -413,6 +416,8 @@ private:
     
     /// The memory consumption of a list.
     cnmemStatus_t getMemoryUnsafe(std::size_t &memSize, const Block *head) const;
+    /// The max alloc size that can be done.
+    cnmemStatus_t getMaxMemoryUnsafe(std::size_t &size, const Block *head) const;
     /// Print an internal linked list.
     cnmemStatus_t printListUnsafe(FILE *file, const char *name, const Block *head) const;
 };
@@ -608,6 +613,16 @@ cnmemStatus_t Manager::getMemoryUnsafe(std::size_t &size, const Block *head) con
     size = 0;
     for( Block *curr = (Block*) head ; curr ; curr = curr->getNext() ) {
         size += curr->getSize();
+    }
+    return CNMEM_STATUS_SUCCESS;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+cnmemStatus_t Manager::getMaxMemoryUnsafe(std::size_t &size, const Block *head) const {
+    size = 0;
+    for( Block *curr = (Block*) head ; curr ; curr = curr->getNext() ) {
+      size = max(size, curr->getSize());
     }
     return CNMEM_STATUS_SUCCESS;
 }
@@ -1265,6 +1280,25 @@ cnmemStatus_t cnmemMemGetInfo(size_t *freeMem, size_t *totalMem, cudaStream_t st
     return CNMEM_STATUS_SUCCESS;
 }
 
+cnmemStatus_t cnmemMemGetMaxAlloc(size_t *maxAlloc, cudaStream_t stream) {
+    CNMEM_CHECK_TRUE(cnmem::Context::check(), CNMEM_STATUS_NOT_INITIALIZED);
+    CNMEM_CHECK_TRUE(maxAlloc, CNMEM_STATUS_INVALID_ARGUMENT);
+
+    int device;
+    CNMEM_CHECK_CUDA(cudaGetDevice(&device));
+    cnmem::Manager &root = cnmem::Context::get()->getManager(device);
+    cnmem::Manager *manager = &root;
+    if( stream ) {
+        CNMEM_CHECK(root.getChildFromStream(manager, stream));
+    }
+    CNMEM_ASSERT(manager);
+
+    const cnmem::Mutex *mutex = manager->getMutex();
+    CNMEM_CHECK(mutex->lock());
+    CNMEM_CHECK_OR_UNLOCK(manager->getMaxFreeMemoryUnsafe(*maxAlloc), *mutex);
+    CNMEM_CHECK(mutex->unlock());
+    return CNMEM_STATUS_SUCCESS;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 cnmemStatus_t cnmemPrintMemoryState(FILE *file, cudaStream_t stream) {

@@ -37,6 +37,7 @@ APPLY_SPECIFIC(conv_gw)(CudaNdarray *input, CudaNdarray *output,
     size_t worksize;
     void *workspace;
     cudnnConvolutionBwdFilterAlgo_t chosen_algo;
+    bool use_cnmem = false;
 
     if (CHOOSE_ALGO)
     {
@@ -106,14 +107,27 @@ APPLY_SPECIFIC(conv_gw)(CudaNdarray *input, CudaNdarray *output,
           // shapes of the inputs and the amount of memory available.
 
           // Get the amount of available memory
-          size_t free = 0, total = 0;
-          cudaError_t err2 = cudaMemGetInfo(&free, &total);
+          size_t free = 0, max = 0;
+          cudaError_t err2 = cudaMemGetInfo(&free, NULL);
+          cnmemStatus_t err3 = cnmemMemGetMaxAlloc(&max, NULL);
+
           if (err2 != cudaSuccess){
             cudaGetLastError();
             fprintf(stderr,
                     "Error when trying to find the memory information"
                     " on the GPU: %s\n", cudaGetErrorString(err2));
             return 1;
+          }
+          if (err3 != CNMEM_STATUS_SUCCESS &&
+              err3 != CNMEM_STATUS_NOT_INITIALIZED){
+            fprintf(stderr,
+                    "Error when trying to find the memory information"
+                    " on the GPU of cnmem: %s\n", cnmemGetErrorString(err3));
+            return 1;
+          }
+          if (err3 == CNMEM_STATUS_SUCCESS && max > free){
+            use_cnmem = true;
+            free = max;
           }
 
           // Use heuristics to choose the implementation
@@ -216,7 +230,11 @@ APPLY_SPECIFIC(conv_gw)(CudaNdarray *input, CudaNdarray *output,
     }
 
     // Allocate workspace for the convolution
-    workspace = get_work_mem(worksize);
+    if (use_cnmem){
+      workspace = device_malloc(worksize);
+    }else
+      workspace = get_work_mem(worksize);
+
     if (workspace == NULL && worksize != 0)
       return 1;
 
@@ -231,6 +249,9 @@ APPLY_SPECIFIC(conv_gw)(CudaNdarray *input, CudaNdarray *output,
       workspace, worksize,
       (void *)&beta,
       APPLY_SPECIFIC(kerns), CudaNdarray_DEV_DATA(*kerns));
+    if (use_cnmem){
+      device_free(workspace);
+    }
 
   }
 

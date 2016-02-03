@@ -234,6 +234,7 @@ cnmemStatus_t CNMEM_API cnmemFree(void *ptr, cudaStream_t stream);
  * CNMEM_STATUS_CUDA_ERROR,       if an error happens in one of the CUDA functions.
  */
 cnmemStatus_t CNMEM_API cnmemMemGetInfo(size_t *freeMem, size_t *totalMem, cudaStream_t stream);
+cnmemStatus_t CNMEM_API cnmemMemGetMaxAlloc(size_t *maxAlloc, cudaStream_t stream);
 
 /**
  * \brief Print a list of nodes to a file. 

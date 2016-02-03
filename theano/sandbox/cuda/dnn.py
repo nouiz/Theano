@@ -335,6 +335,9 @@ class GpuDnnConv(DnnBase, COp):
                              'guess_once', 'guess_on_shape_change',
                              'time_once', 'time_on_shape_change']
 
+    def c_headers(self):
+        return super(GpuDnnConv, self).c_headers() + ['cnmem.h']
+
     def __setstate__(self, d):
         self.__dict__.update(d)
         if not hasattr(self, 'algo'):
@@ -575,6 +578,9 @@ class GpuDnnConvGradW(DnnBase, COp):
                              'guess_once', 'guess_on_shape_change',
                              'time_once', 'time_on_shape_change']
 
+    def c_headers(self):
+        return super(GpuDnnConvGradW, self).c_headers() + ['cnmem.h']
+
     def __setstate__(self, d):
         self.__dict__.update(d)
         if not hasattr(self, 'algo'):
@@ -794,6 +800,9 @@ class GpuDnnConvGradI(DnnBase, COp):
         assert self.algo in ['none', 'deterministic', 'fft', 'fft_tiling',
                              'guess_once', 'guess_on_shape_change',
                              'time_once', 'time_on_shape_change']
+
+    def c_headers(self):
+        return super(GpuDnnConvGradI, self).c_headers() + ['cnmem.h']
 
     def __setstate__(self, d):
         self.__dict__.update(d)

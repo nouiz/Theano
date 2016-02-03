@@ -93,6 +93,7 @@ APPLY_SPECIFIC(conv_fwd)(PyGpuArrayObject *input, PyGpuArrayObject *kerns,
     algo = choice.algo;
 #else
     size_t free = 0, total = 0;
+    // we ignore cnmem... cnmemMemGetInfo(), in fact need the max block size.
     cudaError_t err2 = cudaMemGetInfo(&free, &total);
     if (err2 != cudaSuccess) {
       PyErr_Format(PyExc_RuntimeError, "Error when trying to find the "
