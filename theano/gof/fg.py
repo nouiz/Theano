@@ -241,16 +241,6 @@ class FunctionGraph(utils.object2):
         self.inputs = None
         self.outputs = None
 
-    # clients #
-    def clients(self, r):
-        """
-        Set of all the (node, i) pairs such that node.inputs[i] is r.
-        Told differently, a list of (node,i) such that each node have
-        r as input at index i.
-
-        """
-        return r.clients
-
     def __add_clients__(self, r, new_clients):
         """
         Updates the list of clients of r with new_clients.
