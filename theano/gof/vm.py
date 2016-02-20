@@ -998,7 +998,7 @@ class VM_Linker(link.LocalLinker):
         # compile c code.  So if the cache is full, we don't take the
         # lock. If we take the lock, we keep it until all nodes are
         # compiled.
-        orig_n_lock = compilelock.get_lock.n_lock
+        orig_n_lock = getattr(compilelock.get_lock, 'n_lock', 0)
         for node in order:
             try:
                 if self.c_thunks is False:
@@ -1024,7 +1024,7 @@ class VM_Linker(link.LocalLinker):
                           " compiling the node", node, "\n") + e.args
                 raise
         # Free lock
-        while compilelock.get_lock.n_lock > orig_n_lock:
+        while getattr(compilelock.get_lock, 'n_lock', 0) > orig_n_lock:
             compilelock.release_lock()
         for node, thunk in zip(order, thunks):
             thunk.inputs = [storage_map[v] for v in node.inputs]
