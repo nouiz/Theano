@@ -36,7 +36,7 @@ def force_unlock():
 @contextmanager
 def lock_ctx(lock_dir=None, keep_lock=False, **kw):
     get_lock(lock_dir=lock_dir, **kw)
-    yield
+    yield get_lock.n_lock
     if not keep_lock:
         release_lock()
 

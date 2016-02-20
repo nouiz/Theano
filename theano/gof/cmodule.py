@@ -1109,7 +1109,7 @@ class ModuleCache(object):
         if module is not None:
             return module
 
-        with compilelock.lock_ctx(keep_lock=keep_lock):
+        with compilelock.lock_ctx(keep_lock=keep_lock) as n_lock:
             # 1) Maybe somebody else compiled it for us while we
             #    where waiting for the lock. Try to load it again.
             # 2) If other repo that import Theano have Theano ops defined,
@@ -1124,7 +1124,9 @@ class ModuleCache(object):
             #    compilation to skip them, but not for future
             #    compilations. So reloading the cache here
             #    compilation fixes this problem. (we could do that only once)
-            self.refresh(cleanup=False)
+            if n_lock == 1:
+                # Only refresh if we really took the lock now.
+                self.refresh(cleanup=False)
 
             module = self._get_from_key(key)
             if module is not None:
