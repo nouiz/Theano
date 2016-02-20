@@ -1102,6 +1102,8 @@ class ModuleCache(object):
         if module is not None:
             return module
 
+        # Next line raise MethodNotDefined or NotImplementedError
+        # if we can't generate c code.
         src_code = lnk.get_src_code()
         # Is the source code already in the cache?
         module_hash = get_module_hash(src_code, key)
