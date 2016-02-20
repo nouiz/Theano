@@ -14,7 +14,7 @@ import time
 import warnings
 
 from theano.configparser import (config, _config_var_list)
-
+from theano.gof import compilelock
 import theano.gof.cmodule
 
 from six import iteritems, itervalues
@@ -993,14 +993,27 @@ class VM_Linker(link.LocalLinker):
         reallocated_info = calculate_reallocate_info(
             order, fgraph, storage_map, compute_map_re, dependencies)
 
+        # The number of time the lock was taken up to now.
+        # The way the system work, we take the lock only if we need to
+        # compile c code.  So if the cache is full, we don't take the
+        # lock. If we take the lock, we keep it until all nodes are
+        # compiled.
+        orig_n_lock = compilelock.get_lock.n_lock
         for node in order:
             try:
                 if self.c_thunks is False:
                     node.op._op_use_c_code = False
-                thunks.append(node.op.make_thunk(node,
-                                                 storage_map,
-                                                 compute_map,
-                                                 no_recycling))
+                try:
+                    thunks.append(node.op.make_thunk(node,
+                                                     storage_map,
+                                                     compute_map,
+                                                     no_recycling,
+                                                     keep_lock=True))
+                except TypeError:
+                    thunks.append(node.op.make_thunk(node,
+                                                     storage_map,
+                                                     compute_map,
+                                                     no_recycling))
                 if not hasattr(thunks[-1], 'lazy'):
                     # We don't want all ops maker to think about lazy Ops.
                     # So if they didn't specify that its lazy or not, it isn't.
@@ -1010,6 +1023,9 @@ class VM_Linker(link.LocalLinker):
                 e.args = ("The following error happened while"
                           " compiling the node", node, "\n") + e.args
                 raise
+        # Free lock
+        while compilelock.get_lock.n_lock > orig_n_lock:
+            compilelock.release_lock()
         for node, thunk in zip(order, thunks):
             thunk.inputs = [storage_map[v] for v in node.inputs]
             thunk.outputs = [storage_map[v] for v in node.outputs]

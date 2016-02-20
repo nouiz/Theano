@@ -846,7 +846,8 @@ class Op(utils.object2, PureOp, CLinkerOp):
         """
         pass
 
-    def make_c_thunk(self, node, storage_map, compute_map, no_recycling):
+    def make_c_thunk(self, node, storage_map, compute_map, no_recycling,
+                     keep_lock=False):
         """
         Like make_thunk, but will only try to make a C thunk.
 
@@ -876,7 +877,8 @@ class Op(utils.object2, PureOp, CLinkerOp):
 
         logger.debug('Trying CLinker.make_thunk')
         outputs = cl.make_thunk(input_storage=node_input_storage,
-                                output_storage=node_output_storage)
+                                output_storage=node_output_storage,
+                                keep_lock=keep_lock)
         fill_storage, node_input_filters, node_output_filters = outputs
 
         def rval():
@@ -929,7 +931,8 @@ class Op(utils.object2, PureOp, CLinkerOp):
         rval.lazy = False
         return rval
 
-    def make_thunk(self, node, storage_map, compute_map, no_recycling):
+    def make_thunk(self, node, storage_map, compute_map, no_recycling,
+                   keep_lock=False):
         """
 
         Parameters
@@ -966,7 +969,7 @@ class Op(utils.object2, PureOp, CLinkerOp):
         if self._op_use_c_code:
             try:
                 return self.make_c_thunk(node, storage_map, compute_map,
-                                         no_recycling)
+                                         no_recycling, keep_lock=keep_lock)
             except (NotImplementedError, utils.MethodNotDefined):
                 logger.debug('Falling back on perform')
 
