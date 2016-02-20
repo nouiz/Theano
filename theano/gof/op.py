@@ -860,9 +860,6 @@ class Op(utils.object2, PureOp, CLinkerOp):
            If we can't generate c code.
 
         """
-        node_input_storage = [storage_map[r] for r in node.inputs]
-        node_output_storage = [storage_map[r] for r in node.outputs]
-
         # float16 gets special treatment since running
         # unprepared C code will get bad results.
         if not getattr(self, '_f16_ok', False):
@@ -874,6 +871,10 @@ class Op(utils.object2, PureOp, CLinkerOp):
                 print("Disabling C code for %s due to unsupported "
                       "float16" % (self,))
                 raise NotImplementedError("float16")
+
+        node_input_storage = [storage_map[r] for r in node.inputs]
+        node_output_storage = [storage_map[r] for r in node.outputs]
+
         e = FunctionGraph(node.inputs, node.outputs)
         e_no_recycling = [new_o
                           for (new_o, old_o) in zip(e.outputs, node.outputs)
