@@ -1119,6 +1119,11 @@ class CLinker(link.Linker):
         object
             Thunk, input_storage, output_storage, error_storage.
 
+        Raises
+        ------
+        MethodNotDefined, NotImplementedError
+           If we can't generate c code.
+
         """
         error_storage = [None, None, None]
         if input_storage is None:
@@ -1193,6 +1198,12 @@ class CLinker(link.Linker):
           istor[1].data = second_input
           f()
           first_output = ostor[0].data
+
+        Raises
+        ------
+        MethodNotDefined, NotImplementedError
+           If we can't generate c code.
+
         """
         init_tasks, tasks = self.get_init_tasks()
         cthunk, in_storage, out_storage, error_storage = self.__compile__(
@@ -1582,6 +1593,11 @@ class CLinker(link.Linker):
         when executed, will fetch its inputs from in_storage, put its
         outputs in out_storage and if an error occurs will put the
         type, value and traceback of the exception in error_storage.
+
+        Raises
+        ------
+        MethodNotDefined, NotImplementedError
+           If we can't generate c code.
         """
         try:
             key = self.cmodule_key()

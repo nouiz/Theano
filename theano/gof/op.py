@@ -851,6 +851,11 @@ class Op(utils.object2, PureOp, CLinkerOp):
         """
         Like make_thunk, but will only try to make a C thunk.
 
+        Raises
+        ------
+        MethodNotDefined, NotImplementedError
+           If we can't generate c code.
+
         """
         logger = logging.getLogger('theano.gof.op.Op')
 

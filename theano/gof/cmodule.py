@@ -1096,6 +1096,10 @@ class ModuleCache(object):
         keep_lock : bool
             If True, the compilation lock will not be released if taken.
 
+        Raises
+        ------
+        MethodNotDefined, NotImplementedError
+           If we can't generate c code.
         """
         # Is the module in the cache?
         module = self._get_from_key(key)
