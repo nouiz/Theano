@@ -603,14 +603,13 @@ def map_storage(fgraph, order, input_storage, output_storage, storage_map=None):
     return input_storage, output_storage, storage_map
 
 
-def streamline(fgraph, thunks, order, post_thunk_old_storage=None,
+def streamline(thunks, order, post_thunk_old_storage=None,
                no_recycling=None, nice_errors=True):
     """
     WRITEME
 
     Parameters
     ----------
-    fgraph
     thunks
         The list of program instructions.
     order
@@ -851,7 +850,7 @@ class PerformLinker(LocalLinker):
             no_recycling = [storage_map[r] for r in no_recycling if r not in fgraph.inputs]
 
         # The function that actually runs your program is one of the f's in streamline.
-        f = streamline(fgraph, thunks, order, post_thunk_old_storage,
+        f = streamline(thunks, order, post_thunk_old_storage,
                        no_recycling=no_recycling)
 
         f.allow_gc = self.allow_gc  # HACK: this is a way of passing an arg to Function.__call__

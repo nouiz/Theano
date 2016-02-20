@@ -1826,7 +1826,7 @@ class OpWiseCLinker(link.LocalLinker):
                 no_recycling = [storage_map[r]
                                 for r in no_recycling if r not in fgraph.inputs]
 
-            f = link.streamline(fgraph, thunks, order,
+            f = link.streamline(thunks, order,
                                 post_thunk_old_storage,
                                 no_recycling=no_recycling,
                                 nice_errors=self.nice_errors)
