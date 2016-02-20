@@ -33,6 +33,9 @@ __contact__ = "theano-dev <theano-dev@googlegroups.com>"
 __docformat__ = "restructuredtext en"
 
 
+logger = logging.getLogger('theano.gof.op.Op')
+
+
 class CLinkerObject(object):
     """
     Standard elements of an Op or Type used with the CLinker.
@@ -857,8 +860,6 @@ class Op(utils.object2, PureOp, CLinkerOp):
            If we can't generate c code.
 
         """
-        logger = logging.getLogger('theano.gof.op.Op')
-
         node_input_storage = [storage_map[r] for r in node.inputs]
         node_output_storage = [storage_map[r] for r in node.outputs]
 
@@ -965,8 +966,6 @@ class Op(utils.object2, PureOp, CLinkerOp):
         then it must not do so for variables in the no_recycling list.
 
         """
-        logger = logging.getLogger('theano.gof.op.Op')
-
         new_node = self.prepare_node(node)
         if new_node is not None:
             node = new_node
