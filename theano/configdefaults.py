@@ -1206,7 +1206,8 @@ def default_blas_ldflags():
             try:
                 import mkl  # noqa
             except ImportError as e:
-                _logger.info('Conda mkl is not available: %s', e)
+                _logger.info('Conda mkl-service package is not available: %s',
+                             e)
             else:
                 # This branch is executed if no exception was raised
                 lib_path = os.path.join(sys.prefix, 'DLLs')
