@@ -554,6 +554,20 @@ class Function(object):
         """
         return self.copy()
 
+    def __deepcopy__(self, memo):
+        """
+        Deep copy a function. Copied function have separate intermediate
+        storages and output storages with original function
+
+        Notes
+        -----
+        This is needed to work around python max recursion in
+        default deep copy method.
+        """
+        cpy = self.copy()
+        memo[id(self)] = cpy
+        return cpy
+
     def copy(self, share_memory=False, swap=None, delete_updates=False,
              name=None, profile=None):
         """
