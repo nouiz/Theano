@@ -6853,3 +6853,29 @@ def local_merge_alloc(node):
                     dim_outer, T.eq(dim_outer, dim_inner))
         i += 1
     return [T.alloc(inputs_inner[0], *dims_outer)]
+
+@gof.local_optimizer(None)
+def local_dup_comp(node):
+    dup = False
+    if (isinstance(node.op, theano.tensor.signal.pool.Pool) and
+        len(node.outputs[0].clients) == 2):
+        dup = True
+    if not dup:
+        return
+    c2, c2i = node.outputs[0].clients[1]
+    # To duplicate computation, we should replace the user of the
+    # duplicate computation. FunctionGraph don't allow to just do it
+    # directly.
+    dup = node.op.make_node(*node.inputs)
+    c2_new_inputs = list(c2.inputs)
+    c2_new_inputs[c2i] = dup
+    new = c2.op.make_node(*c2_new_inputs)
+#    theano.printing.debugprint(c2.outputs)
+#    import pdb;pdb.set_trace()
+    return dict(zip(c2.outputs, new.outputs))
+
+    pass
+
+compile.optdb.register('local_dup_comp', in2out(local_dup_comp),
+                       101, # register after the last merge.
+                       'dup')
