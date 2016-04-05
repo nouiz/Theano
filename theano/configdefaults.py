@@ -559,6 +559,14 @@ AddConfigVar(
     BoolParam(True),
     in_c_key=False)
 
+AddConfigVar(
+    'fusion.extra',
+    ("If True, we will do more Elemwise fusion."
+     " THis could speed up or slow down execution."
+     " This could raise or lower peak memory usage."),
+    BoolParam(False),
+    in_c_key=False)
+
 # http://developer.amd.com/CPU/LIBRARIES/LIBM/Pages/default.aspx
 AddConfigVar(
     'lib.amdlibm',

@@ -6746,7 +6746,8 @@ def local_elemwise_fusion_op(OP, max_input_fct=lambda node: 32,
             # we still want to fusion. So we take the set.
             if (i.owner and
                     isinstance(i.owner.op, OP) and
-                    len(set([n for n, idx in i.clients])) == 1 and
+                (config.fusion.extra or len(set([n for n, idx in i.clients])) == 1) and
+                all([isinstance(getattr(n, 'op', None), OP) for n, idx in i.clients]) and
                     # Do not merge elemwise that don't have the same
                     # broadcastable pattern to don't redo duplicate
                     # computation due to broadcast.
@@ -6838,7 +6839,9 @@ def local_elemwise_fusion_op(OP, max_input_fct=lambda node: 32,
         if not fused:
             return False
 
-        if new_nb_input != len(inputs) or len(s_inputs) != len(inputs):
+            #        if new_nb_input != len(inputs) or len(s_inputs) != len(inputs):
+
+        if max_nb_input < len(inputs) or len(s_inputs) != len(inputs):
             raise Exception("""Something has gone wrong with the elemwise
 fusion optimization. We skip this optimization. You can ignore this message,
 your code will run correctly, but may be slower.""")
