@@ -791,7 +791,7 @@ class DestroyHandler(toolbox.Bookkeeper):  # noqa
         - Allow sequence of destroy variables.
         - Allow view to have multiple clients.
         - Allow sequence of view.
-        - But destroyed inputs should have only 1 clients
+        - But we can't destroy a view
         """
 
         if not config.faster_cycle:
@@ -808,13 +808,20 @@ class DestroyHandler(toolbox.Bookkeeper):  # noqa
             destroyed_inputs_idx += i
         for d_inp_idx in destroyed_inputs_idx:
             d_inp = app.inputs[d_inp_idx]  # The destroyed input variable
-            if len(d_inp.clients) == 1:
-                # We are fine, the algo tell we shouldn't generate cycle
-                continue
-            # Current simplest version don't allow destroyed inputs to
-            # have more then 1 client.
+            if len(d_inp.clients) != 1:
+                # We allow only 1 clients on variable we destroy
                 self.fail_validate = True
-                
+
+            # If the variable destroyed isn't a view, we are fine.
+            if not d_inp.owner or not getattr(d_inp.owner.op,
+                                              'view_map', False):
+                continue
+            # The node have views, verify if this specific output is a view.
+            v_out_idx = d_inp.owner.outputs.index(d_inp)
+            if v_out_idx not in d_inp.owner.op.view_map:
+                continue
+            self.fail_validate = True
+
             # Temp code to try to allow inplace on inputs with more
             # then 1 clients, but not on view. To explore only after
             # the first version completly work and is merged and there
