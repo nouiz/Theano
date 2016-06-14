@@ -376,9 +376,20 @@ class GraphToGPU(NavigatorOptimizer):
             if new_o.type != o.type:
                 assert isinstance(o.type, tensor.TensorType)
                 assert isinstance(new_o.type, GpuArrayType)
-                new_o = host_from_gpu(new_o)
+                assert new_o.owner
+                # This condition is needed in the case one input is an
+                # output of the graph. Without this, it would
+                # introduce cycle as we don't replace correctly that
+                # case. It would also add extra transfer to/from the
+                # gpu.
+                if (isinstance(new_o.owner.op, GpuFromHost) and
+                        new_o.owner.inputs[0].type == o.type):
+                    new_o = new_o.owner.inputs[0]
+                else:
+                    new_o = host_from_gpu(new_o)
             new_nodes.append(new_o)
-        fgraph.replace_all_validate(zip(fgraph.outputs, new_nodes))
+        fgraph.replace_all_validate(zip(fgraph.outputs, new_nodes),
+                                    reason=self.__class__.__name__)
 
         return (self, toposort_timing, time_opts, node_created, process_count)
 
@@ -876,10 +887,7 @@ def local_gpua_split(op, context_name, inputs):
 
 @register_opt('fast_compile')
 @op_lifter([tensor.Subtensor])
-@register_opt2([tensor.Subtensor], 'fast_compile')
 def local_gpua_subtensor(op, context_name, inputs, outputs):
-    if isinstance(inputs[0].type, GpuArrayType):
-        return
     x = inputs[0]
     # list of list containing clients
     # it is clients per node basis
@@ -895,7 +903,34 @@ def local_gpua_subtensor(op, context_name, inputs, outputs):
                                               for v in n.inputs + n.outputs])
                         for n, _ in clients[0]]):
                     return
+    # Here is the condition for the GraphToGPU opt. inputs is the
+    # inputs we want to use for the new node
+    if (x.owner and isinstance(x.owner.op, GpuFromHost)):
+        cpu_x = x.owner.inputs[0]
+        # And it is a shared var or an input of the graph.
+        # and is used by only 1 node.
+        # x is in the new graph, so we can't tests its number of clients.
+        if not cpu_x.owner and len(cpu_x.clients) == 1:
+            return
+    return GpuSubtensor(op.idx_list)
 
+
+@register_opt2([tensor.Subtensor], 'fast_compile')
+def local_gpua_subtensor_graph(op, context_name, inputs, outputs):
+    # We need different code as the condition is different as inputs
+    # aren't the same.
+    x = inputs[0]
+    # We don't want to move the subtensor to the GPU if the inputs is
+    # on the CPU and the only client of the CPU node is this
+    # subtensor. This allow to have a smaller transfer.
+
+    if (x.owner and isinstance(x.owner.op, GpuFromHost)):
+        cpu_x = x.owner.inputs[0]
+        # And it is a shared var or an input of the graph.
+        # and is used by only 1 node.
+        # x is in the new graph, so we can't tests its number of clients.
+        if not cpu_x.owner and len(cpu_x.clients) == 1:
+            return
     return GpuSubtensor(op.idx_list)
 
 
