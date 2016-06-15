@@ -14,7 +14,7 @@ from theano.gof import Optimizer, local_optimizer, COp
 from theano.gof.cmodule import GCC_compiler
 from theano.gof.type import CDataType, Generic
 from theano.compile import optdb
-from theano.compile.ops import shape_i
+from theano.compile.ops import shape_i, shape_i_op
 from theano.tensor.nnet import LogSoftmax, SoftmaxGrad
 from theano.tensor.nnet.abstract_conv import (AbstractConv2d,
                                               AbstractConv2d_gradWeights,
@@ -957,9 +957,13 @@ def dnn_conv(img, kerns, border_mode='valid', subsample=(1, 1),
     desc = GpuDnnConvDesc(border_mode=border_mode, subsample=subsample,
                           conv_mode=conv_mode, precision=precision)(kerns.shape)
     desc_op = desc.owner.op
-    out_shp = GpuDnnConv.get_out_shape(img.shape, kerns.shape,
-                                       desc_op.border_mode,
-                                       desc_op.subsample)
+    # We can use Shape_i and bypass the infer_shape here as this is on
+    # the input of node and it will always be present.
+    ishape = [shape_i_op(i)(img) for i in range(img.ndim)]
+    kshape = [shape_i_op(i)(kerns) for i in range(kerns.ndim)]
+    out_shp = get_conv_output_shape(ishape, kshape,
+                                    desc_op.border_mode,
+                                    desc_op.subsample)
     out = gpu_alloc_empty(img.dtype, ctx_name)(*out_shp)
     return gpu_dnn_conv(algo=algo)(img, kerns, out, desc)
 
@@ -1440,14 +1444,14 @@ def local_abstractconv_cudnn_graph(op, context_name, inputs, outputs):
                         subsample=op.subsample,
                         direction_hint='forward!',
                         conv_mode=conv_mode)
-    if isinstance(op, AbstractConv2d_gradWeights):
+    elif isinstance(op, AbstractConv2d_gradWeights):
         shape = (inp2.shape[1], inp1.shape[1],
                  inputs[2][0], inputs[2][1])
         rval = dnn_gradweight(inp1, inp2, shape,
                               border_mode=op.border_mode,
                               subsample=op.subsample,
                               conv_mode=conv_mode)
-    if isinstance(op, AbstractConv2d_gradInputs):
+    elif isinstance(op, AbstractConv2d_gradInputs):
         shape = (inp2.shape[0], inp1.shape[1],
                  inputs[2][0], inputs[2][1])
         rval = dnn_gradinput(inp1, inp2, shape,
