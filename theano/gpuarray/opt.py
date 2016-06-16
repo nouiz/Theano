@@ -318,7 +318,20 @@ class GraphToGPU(NavigatorOptimizer):
                     context_name = i.type.context_name
                     move_to_GPU = True
                     break
+            if (not move_to_GPU and
+                    isinstance(node.op, (theano.tensor.Alloc,
+                                         theano.tensor.AllocEmpty))):
+                # If the Alloc[Empty] have a client that will be moved
+                # to the GPU, we should move the Alloc* on the GPU.
 
+                # We approximate this by supposing that if we have an
+                # optimization for one of the clients op, then we will
+                # move the client to the GPU.
+                for c, _ in node.outputs[0].clients:
+                    if (c != 'output' and
+                        (self.local_optimizers_map.get(c.op, []) +
+                         self.local_optimizers_map.get(type(c.op)))):
+                        move_to_GPU = True
             new_ops = None
             outputs = []
             # Apply the lifter
@@ -880,20 +893,14 @@ def local_gpua_split(op, context_name, inputs, outputs):
 @op_lifter([tensor.Subtensor])
 def local_gpua_subtensor(op, context_name, inputs, outputs):
     x = inputs[0]
-    # list of list containing clients
-    # it is clients per node basis
-    clients = [o.clients for o in outputs]
     if (x.owner and isinstance(x.owner.op, HostFromGpu)):
         gpu_x = x.owner.inputs[0]
         if (gpu_x.owner and
                 isinstance(gpu_x.owner.op, GpuFromHost) and
                 # And it is a shared var or an input of the graph.
                 not gpu_x.owner.inputs[0].owner):
-            if len(x.clients) == 1:
-                if any([n == 'output' or any([isinstance(v.type, GpuArrayType)
-                                              for v in n.inputs + n.outputs])
-                        for n, _ in clients[0]]):
-                    return
+            if len(x.clients) == 1 and len(outputs[0].clients) == 1:
+                return
     # Here is the condition for the GraphToGPU opt. inputs is the
     # inputs we want to use for the new node
     if (x.owner and isinstance(x.owner.op, GpuFromHost)):
@@ -921,7 +928,12 @@ def local_gpua_subtensor_graph(op, context_name, inputs, outputs):
         # and is used by only 1 node.
         # x is in the new graph, so we can't tests its number of clients.
         if not cpu_x.owner and len(cpu_x.clients) == 1:
-            return
+            c = outputs[0].clients
+            # If the subtensor have only 1 client, do it on the CPU.
+            # We let the other optimization to take care to move the
+            # next node or not.
+            if len(c) == 1:
+                return
     return GpuSubtensor(op.idx_list)
 
 
