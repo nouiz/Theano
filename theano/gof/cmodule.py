@@ -1918,6 +1918,8 @@ class GCC_compiler(Compiler):
                             selected_lines.append(line.strip())
                         elif "-target-cpu" in line:
                             selected_lines.append(line.strip())
+                        elif "-mabi=" in line:  # Happen on TX1
+                            selected_lines.append(line.strip())
                     lines = list(set(selected_lines))  # to remove duplicate
 
                 return lines
