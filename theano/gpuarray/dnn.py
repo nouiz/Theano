@@ -27,7 +27,7 @@ from theano.tensor.nnet.abstract_conv import (AbstractConv2d,
                                               get_conv_output_shape,
                                               assert_conv_shape)
 from theano.tensor.signal.pool import (
-    Pool, MaxPoolGrad, AveragePoolGrad)
+    Pool, MaxPoolGrad, AveragePoolGrad, RoIPoolOp, RoIPoolGradOp)
 from . import pygpu
 from .type import (get_context, gpu_context_type, list_contexts,
                    get_prop, set_prop, GpuArraySharedVariable)
@@ -2944,3 +2944,53 @@ def local_gpua_softmax_dnn_grad(op, ctx_name, inputs, outputs):
     out = GpuDnnSoftmaxGrad('accurate', 'instance')(
         gpu_contiguous(ins[0]), gpu_contiguous(ins[1]))
     return [out.dimshuffle(0, 2)]
+
+
+class GpuRoIPool(RoIPoolOp, COp):
+
+    __props__ = ('spatial_scale', 'pooled_h', 'pooled_w')
+    func_file = "./roi_pool.c"
+    func_name = "APPLY_SPECIFIC(GPUForward)"
+
+    def __init__(self, pooled_h, pooled_w, spatial_scale):
+        super(GpuRoIPool, self).__init__(self.func_file,
+                                         self.func_name)
+        self.pooled_h = pooled_h
+        self.pooled_w = pooled_w
+        self.spatial_scale = spatial_scale
+
+    def make_node(self, feature_maps, roi):
+        feature_maps = as_gpuarray_variable(feature_maps)
+        roi_tuples = as_gpuarray_variable(roi)
+        assert feature_maps.ndim == 4
+        assert roi.ndim == 2
+        return Apply(self, [feature_maps, roi_tuples], [feature_maps.type()])
+
+    def c_code_cache_version(self):
+        return (1, 0)
+
+
+class GpuRoIPoolGradOp(RoIPoolGradOp, COp):
+
+    __props__ = ('spatial_scale', 'pooled_h', 'pooled_w')
+    func_file = "./roi_pool.c"
+    func_name = "APPLY_SPECIFIC(GPUBackward)"
+
+    def __init__(self, pooled_h, pooled_w, spatial_scale):
+        super(GpuRoIPoolGradOp, self).__init__(self.func_file,
+                                               self.func_name)
+        self.pooled_h = pooled_h
+        self.pooled_w = pooled_w
+        self.spatial_scale = spatial_scale
+
+    def make_node(self, feature_maps, rois, out_grad):
+        feature_maps = as_gpuarray_variable(feature_maps)
+        roi_tuples = as_gpuarray_variable(rois)
+        out_grad = as_gpuarray_variable(out_grad)
+        assert feature_maps.ndim == 4
+        assert rois.ndim == 2
+        assert out_grad.ndim == 4
+        return Apply(self, [feature_maps, roi_tuples, out_grad], [feature_maps.type()])
+
+    def c_code_cache_version(self):
+        return (1, 0)
