@@ -15,6 +15,7 @@ from theano.gradient import DisconnectedType, grad_not_implemented
 from theano.gof import Optimizer, local_optimizer, COp
 from theano.gof.cmodule import GCC_compiler
 from theano.gof.type import CDataType, Generic
+from theano.gradient import grad_undefined
 from theano.compile import optdb
 from theano.compile.ops import shape_i, shape_i_op
 from theano.tensor.nnet import LogSoftmax, SoftmaxGrad
@@ -2953,21 +2954,35 @@ class GpuRoIPool(RoIPoolOp, COp):
     func_name = "APPLY_SPECIFIC(GPUForward)"
 
     def __init__(self, pooled_h, pooled_w, spatial_scale):
-        super(GpuRoIPool, self).__init__(self.func_file,
-                                         self.func_name)
+        super(GpuRoIPool, self).__init__(pooled_h, pooled_w, spatial_scale)
         self.pooled_h = pooled_h
         self.pooled_w = pooled_w
         self.spatial_scale = spatial_scale
 
     def make_node(self, feature_maps, roi):
-        feature_maps = as_gpuarray_variable(feature_maps)
-        roi_tuples = as_gpuarray_variable(roi)
+        ctx_name = infer_context_name(feature_maps, roi)
+        feature_maps = as_gpuarray_variable(feature_maps, ctx_name)
+        roi_tuples = as_gpuarray_variable(roi, ctx_name)
         assert feature_maps.ndim == 4
         assert roi.ndim == 2
-        return Apply(self, [feature_maps, roi_tuples], [feature_maps.type()])
+        return Apply(self, [feature_maps, roi_tuples], [feature_maps.type(), feature_maps.type()])
+
+    def infer_shape(self, node, in_shapes):
+        data_shape = tensor.shape(node.inputs[0])
+        rois_shape = tensor.shape(node.inputs[1])
+        batch_size = rois_shape[0]
+        num_maps = data_shape[1]
+        h = self.pooled_h
+        w = self.pooled_w
+        out_shape = [batch_size, num_maps, h, w]
+        return [out_shape, out_shape]
 
     def c_code_cache_version(self):
         return (1, 0)
+
+    def grad(self, inp, grads):
+        return [GpuRoIPoolGradOp(self.pooled_h, self.pooled_w,
+                                 self.spatial_scale)(*(inp + [self(*inp)[1], grads[0]])), grad_undefined(self, 1, inp[1])]
 
 
 class GpuRoIPoolGradOp(RoIPoolGradOp, COp):
@@ -2977,20 +2992,25 @@ class GpuRoIPoolGradOp(RoIPoolGradOp, COp):
     func_name = "APPLY_SPECIFIC(GPUBackward)"
 
     def __init__(self, pooled_h, pooled_w, spatial_scale):
-        super(GpuRoIPoolGradOp, self).__init__(self.func_file,
-                                               self.func_name)
+        super(GpuRoIPoolGradOp, self).__init__(pooled_h, pooled_w, spatial_scale)
         self.pooled_h = pooled_h
         self.pooled_w = pooled_w
         self.spatial_scale = spatial_scale
 
-    def make_node(self, feature_maps, rois, out_grad):
-        feature_maps = as_gpuarray_variable(feature_maps)
-        roi_tuples = as_gpuarray_variable(rois)
-        out_grad = as_gpuarray_variable(out_grad)
+    def make_node(self, feature_maps, rois, argmaxes, out_grad):
+        ctx_name = infer_context_name(feature_maps, rois, argmaxes, out_grad)
+        feature_maps = as_gpuarray_variable(feature_maps, ctx_name)
+        roi_tuples = as_gpuarray_variable(rois, ctx_name)
+        out_grad = as_gpuarray_variable(out_grad, ctx_name)
+        argmaxes = as_gpuarray_variable(argmaxes, ctx_name)
         assert feature_maps.ndim == 4
         assert rois.ndim == 2
+        assert argmaxes.ndim == 4
         assert out_grad.ndim == 4
         return Apply(self, [feature_maps, roi_tuples, out_grad], [feature_maps.type()])
+
+    def infer_shape(self, node, in_shapes):
+        return [in_shapes[0]]
 
     def c_code_cache_version(self):
         return (1, 0)
