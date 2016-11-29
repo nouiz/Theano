@@ -853,6 +853,12 @@ class Op(utils.object2, PureOp, CLinkerOp):
         else:
             p = node.op.perform
 
+        if node.op.perform.__code__ == PureOp.perform.__code__:
+            raise RuntimeError(
+                "We try to use '%s' perform method, but it don't have one."
+                " Do you have a c++ compiler available?" %
+                node.op)
+
         params = node.run_params()
 
         if params is graph.NoParams:
