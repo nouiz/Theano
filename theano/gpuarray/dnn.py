@@ -28,13 +28,13 @@ from theano.tensor.nnet.abstract_conv import (AbstractConv2d,
                                               get_conv_output_shape,
                                               assert_conv_shape)
 from theano.tensor.signal.pool import (
-    Pool, MaxPoolGrad, AveragePoolGrad, RoIPoolOp, RoIPoolGradOp)
+    Pool, MaxPoolGrad, AveragePoolGrad)
 from . import pygpu
 from .type import (get_context, gpu_context_type, list_contexts,
                    get_prop, set_prop, GpuArraySharedVariable)
 from .basic_ops import (as_gpuarray_variable, infer_context_name,
                         gpu_contiguous, gpu_alloc_empty,
-                        empty_like, GpuArrayType)
+                        empty_like, GpuArrayType, CGpuKernelBase)
 from .elemwise import GpuElemwise
 
 # These don't exist in gpuarray
@@ -2947,17 +2947,19 @@ def local_gpua_softmax_dnn_grad(op, ctx_name, inputs, outputs):
     return [out.dimshuffle(0, 2)]
 
 
-class GpuRoIPool(RoIPoolOp, COp):
+class GpuRoIPool(CGpuKernelBase, Op):
 
     __props__ = ('spatial_scale', 'pooled_h', 'pooled_w')
-    func_file = "./roi_pool.c"
-    func_name = "APPLY_SPECIFIC(GPUForward)"
+    _f16_ok = True
 
     def __init__(self, pooled_h, pooled_w, spatial_scale):
-        super(GpuRoIPool, self).__init__(pooled_h, pooled_w, spatial_scale)
         self.pooled_h = pooled_h
         self.pooled_w = pooled_w
         self.spatial_scale = spatial_scale
+        CGpuKernelBase.__init__(self, ['roi_pool.c'], 'APPLY_SPECIFIC(ROIPoolGPUFwd)')
+
+    def c_headers(self):
+        return ['<gpuarray/types.h>', '<gpuarray/kernel.h>', 'math.h', 'stdbool.h', 'float.h']
 
     def make_node(self, feature_maps, roi):
         ctx_name = infer_context_name(feature_maps, roi)
@@ -2966,6 +2968,14 @@ class GpuRoIPool(RoIPoolOp, COp):
         assert feature_maps.ndim == 4
         assert roi.ndim == 2
         return Apply(self, [feature_maps, roi_tuples], [feature_maps.type(), feature_maps.type()])
+
+    def get_op_params(self):
+        return [('POOLED_HEIGHT', str(self.pooled_h)),
+                ('POOLED_WIDTH', str(self.pooled_w)),
+                ('SPATIAL_SCALE', str(self.spatial_scale))]
+
+    def get_params(self, node):
+        return node.inputs[0].type.context
 
     def infer_shape(self, node, in_shapes):
         data_shape = tensor.shape(node.inputs[0])
@@ -2985,17 +2995,20 @@ class GpuRoIPool(RoIPoolOp, COp):
                                  self.spatial_scale)(*(inp + [self(*inp)[1], grads[0]])), grad_undefined(self, 1, inp[1])]
 
 
-class GpuRoIPoolGradOp(RoIPoolGradOp, COp):
+class GpuRoIPoolGradOp(CGpuKernelBase, Op):
 
     __props__ = ('spatial_scale', 'pooled_h', 'pooled_w')
-    func_file = "./roi_pool.c"
-    func_name = "APPLY_SPECIFIC(GPUBackward)"
+    _f16_ok = True
 
     def __init__(self, pooled_h, pooled_w, spatial_scale):
-        super(GpuRoIPoolGradOp, self).__init__(pooled_h, pooled_w, spatial_scale)
+        self.dtype = config.floatX
         self.pooled_h = pooled_h
         self.pooled_w = pooled_w
         self.spatial_scale = spatial_scale
+        CGpuKernelBase.__init__(self, ['roi_pool.c'], 'APPLY_SPECIFIC(GPUBackward)')
+
+    def c_headers(self):
+        return ['<gpuarray/types.h>', '<gpuarray/kernel.h>', 'math.h', 'stdbool.h', 'float.h']
 
     def make_node(self, feature_maps, rois, argmaxes, out_grad):
         ctx_name = infer_context_name(feature_maps, rois, argmaxes, out_grad)
@@ -3009,8 +3022,19 @@ class GpuRoIPoolGradOp(RoIPoolGradOp, COp):
         assert out_grad.ndim == 4
         return Apply(self, [feature_maps, roi_tuples, out_grad], [feature_maps.type()])
 
+    def get_params(self, node):
+        return node.inputs[0].type.context
+
+    def get_op_params(self):
+        return [('POOLED_HEIGHT', str(self.pooled_h)),
+                ('POOLED_WIDTH', str(self.pooled_w)),
+                ('SPATIAL_SCALE', str(self.spatial_scale))]
+
     def infer_shape(self, node, in_shapes):
         return [in_shapes[0]]
 
     def c_code_cache_version(self):
         return (1, 0)
+
+    def grad(self, inp, grads):
+        return [grad_undefined(self, i, inp[i]) for i in range(3)]
