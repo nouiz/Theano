@@ -1064,8 +1064,6 @@ class VM_Linker(link.LocalLinker):
                     # If this member isn't present, it will crash later.
                     thunks[-1].lazy = False
             except Exception as e:
-                e.args = ("The following error happened while"
-                          " compiling the node", node, "\n") + e.args
                 raise
         t1 = time.time()
 

@@ -337,19 +337,21 @@ class GpuDownsampleFactorMaxGradGrad(CGpuKernelBase):
         return [[1], [1], [1], [0], [0], [0]]
 
 
-class GpuRoIPool(CGpuKernelBase, Op):
+class GpuRoIPoolOp(CGpuKernelBase):
 
     __props__ = ('spatial_scale', 'pooled_h', 'pooled_w')
     _f16_ok = True
+    func_file = './ROIPoolGPUFwd.c'
+    func_name = 'APPLY_SPECIFIC(ROIPoolGPUFwd)'
 
     def __init__(self, pooled_h, pooled_w, spatial_scale):
+        super(GpuRoIPoolOp, self).__init__(self.func_file, self.func_name)
         self.pooled_h = pooled_h
         self.pooled_w = pooled_w
         self.spatial_scale = spatial_scale
-        CGpuKernelBase.__init__(self, ['roi_pool.c'], 'APPLY_SPECIFIC(ROIPoolGPUFwd)')
 
     def c_headers(self):
-        return ['<gpuarray/types.h>', '<gpuarray/kernel.h>', 'math.h', 'stdbool.h', 'float.h']
+        return ['<gpuarray/types.h>', '<gpuarray/kernel.h>', 'math.h', 'stdbool.h', 'float.h', 'gpuarray_api.h', 'numpy_compat.h']
 
     def make_node(self, feature_maps, roi):
         ctx_name = infer_context_name(feature_maps, roi)
@@ -395,10 +397,10 @@ class GpuRoIPoolGradOp(CGpuKernelBase, Op):
         self.pooled_h = pooled_h
         self.pooled_w = pooled_w
         self.spatial_scale = spatial_scale
-        CGpuKernelBase.__init__(self, ['roi_pool.c'], 'APPLY_SPECIFIC(GPUBackward)')
+        CGpuKernelBase.__init__(self, ['ROIPoolGPUBkwd.c'], 'APPLY_SPECIFIC(ROIPoolGPUBkwd)')
 
     def c_headers(self):
-        return ['<gpuarray/types.h>', '<gpuarray/kernel.h>', 'math.h', 'stdbool.h', 'float.h']
+        return ['<gpuarray/types.h>', '<gpuarray/kernel.h>', 'math.h', 'stdbool.h', 'float.h', 'gpuarray_api.h', 'numpy_compat.h']
 
     def make_node(self, feature_maps, rois, argmaxes, out_grad):
         ctx_name = infer_context_name(feature_maps, rois, argmaxes, out_grad)
